@@ -71,7 +71,7 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
             <span className="text-[10px] font-black text-primary uppercase tracking-widest">Saldo Consolidado de Ativos</span>
           </div>
           <h2 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">Estoque e Armazenamento</h2>
-          <p className="text-slate-500 text-sm font-medium">Visualização unificada de saldos por SKU no CD Manaus.</p>
+          <p className="text-slate-500 text-sm font-medium">Visualização unificada de saldos por Código de Produto no CD Manaus.</p>
         </div>
       </div>
 
@@ -266,7 +266,7 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
       {isQRModalOpen && selectedItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 max-w-xs w-full animate-in zoom-in-95">
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Identificação de SKU</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Identificação de Cód. Produto</h3>
             <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-100">
               <QRCodeSVG value={selectedItem.sku} size={180} />
             </div>

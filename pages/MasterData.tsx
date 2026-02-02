@@ -88,9 +88,8 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
 
       if (activeTab === 'itens') {
         mappedData = data.map((row: any) => {
-          // Gerar código de produto numérico (0 a 999999) se não houver SKU
-          const generatedCode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-          const sku = row['SKU'] || row['Código do Produto'] || generatedCode;
+          // O SKU será gerado automaticamente pelo Supabase se omitido
+          const sku = row['SKU'] || row['Código do Produto'] || '';
 
           return {
             sku: sku,

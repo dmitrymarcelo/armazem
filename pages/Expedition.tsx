@@ -331,7 +331,7 @@ export const Expedition: React.FC<ExpeditionProps> = ({ inventory, onProcessPick
                           </div>
                           <div>
                             <p className="text-base font-black text-slate-800 dark:text-slate-200 leading-tight">{item.name}</p>
-                            <p className="text-[10px] font-black text-primary uppercase mt-1">SKU: {item.sku}</p>
+                            <p className="text-[10px] font-black text-primary uppercase mt-1">Cód. Produto: {item.sku}</p>
                           </div>
                         </div>
 
@@ -374,7 +374,7 @@ export const Expedition: React.FC<ExpeditionProps> = ({ inventory, onProcessPick
             <form onSubmit={handleSubmitRequest} className="p-8 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecione o Item (SKU)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecione o Item (Cód. Produto)</label>
                   <select
                     required
                     value={reqSku}

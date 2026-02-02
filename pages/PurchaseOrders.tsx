@@ -513,7 +513,7 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                         <path d="m21 21-4.3-4.3" />
                         <path d="M11 8a3 3 0 0 0-3 3" />
                       </svg>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aguardando seleção de SKU no catálogo</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aguardando seleção de Cód. Produto no catálogo</p>
                     </div>
                   )}
 
@@ -550,7 +550,7 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 {/* Listagem de Itens Adicionados */}
                 <div className="space-y-4">
                   <div className="px-8 py-3 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <span className="flex-1">Produto / SKU Identificado</span>
+                    <span className="flex-1">Produto / Cód. Produto Identificado</span>
                     <span className="w-32 text-center">Preço Un.</span>
                     <span className="w-32 text-right">Subtotal Bruto</span>
                   </div>

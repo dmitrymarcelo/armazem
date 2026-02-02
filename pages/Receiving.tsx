@@ -179,7 +179,7 @@ export const Receiving: React.FC<ReceivingProps> = ({ onFinalize, availablePOs }
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-xl font-mono text-lg focus:ring-2 focus:ring-primary transition-all"
-                    placeholder="EAN ou SKU..."
+                    placeholder="EAN ou Cód. Produto..."
                     type="text"
                   />
                 </div>
@@ -189,7 +189,7 @@ export const Receiving: React.FC<ReceivingProps> = ({ onFinalize, availablePOs }
                 <p className="text-[10px] font-black text-blue-600 uppercase mb-2">Instrução de Operação</p>
                 <p className="text-xs text-blue-500 font-medium">
                   {selectedPO
-                    ? 'Escaneie o código de barras ou digite o SKU dos produtos para conferência.'
+                    ? 'Escaneie o código de barras ou digite o Cód. Produto dos produtos para conferência.'
                     : 'Selecione um Pedido de Compra acima para iniciar a conferência.'}
                 </p>
               </div>

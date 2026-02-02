@@ -464,25 +464,36 @@ const App: React.FC = () => {
           setInventory(prev => prev.map(i => i.sku === data.sku ? { ...i, ...data } : i));
         }
       } else {
-        // Gerar Código do Produto autonumérico (0 a 999999)
-        const generatedCode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-        const newItem: InventoryItem = { ...data, sku: generatedCode, quantity: 0, status: 'disponivel', batch: 'N/A', expiry: 'N/A', location: 'DOCA-01', minQty: 10, maxQty: 1000 };
-        const { error } = await supabase.from('inventory').insert([{
-          sku: newItem.sku,
-          name: newItem.name,
-          category: newItem.category,
-          unit: newItem.unit,
-          image_url: newItem.imageUrl,
+        // Omitir SKU e deixar o banco (Supabase) gerar o Código do Produto autonumérico
+        const { data: insertedData, error } = await supabase.from('inventory').insert([{
+          name: data.name,
+          category: data.category,
+          unit: data.unit,
+          image_url: data.imageUrl,
           quantity: 0,
           status: 'disponivel',
           location: 'DOCA-01',
           min_qty: 10,
           max_qty: 1000
-        }]);
+        }]).select();
 
-        if (!error) {
+        if (!error && insertedData && insertedData[0]) {
+          const newItem: InventoryItem = {
+            ...data,
+            sku: insertedData[0].sku,
+            quantity: 0,
+            status: 'disponivel',
+            batch: 'N/A',
+            expiry: 'N/A',
+            location: 'DOCA-01',
+            minQty: 10,
+            maxQty: 1000
+          };
           setInventory(prev => [...prev, newItem]);
           await recordMovement('entrada', newItem, 0, 'Criação de novo Código de Produto');
+        } else if (error) {
+          showNotification('Erro ao criar item. Verifique a conexão.', 'error');
+          console.error('Insert error:', error);
         }
       }
     } else if (type === 'vendor') {
@@ -513,18 +524,25 @@ const App: React.FC = () => {
 
     if (type === 'item') {
       table = 'inventory';
-      processedData = data.map(d => ({
-        sku: d.sku,
-        name: d.name,
-        category: d.category,
-        unit: d.unit,
-        image_url: d.imageUrl,
-        quantity: d.quantity,
-        status: d.status,
-        location: d.location,
-        min_qty: d.minQty,
-        max_qty: d.maxQty
-      }));
+      processedData = data.map(d => {
+        const row: any = {
+          name: d.name,
+          category: d.category,
+          unit: d.unit,
+          image_url: d.imageUrl,
+          quantity: d.quantity,
+          status: d.status,
+          location: d.location,
+          min_qty: d.minQty,
+          max_qty: d.maxQty
+        };
+        // Se o SKU foi fornecido manualmente ou veio de um código existente, mantemos
+        // Caso contrário, deixamos o DEFAULT do banco agir (omitindo a chave sku)
+        if (d.sku && !d.sku.startsWith('AUTO-')) {
+          row.sku = d.sku;
+        }
+        return row;
+      });
     } else if (type === 'vendor') {
       table = 'vendors';
       processedData = data.map(d => ({
@@ -546,17 +564,36 @@ const App: React.FC = () => {
       }));
     }
 
-    const { error } = await supabase.from(table).insert(processedData);
+    const { data: insertedData, error } = await supabase.from(table).insert(processedData).select();
 
     if (!error) {
-      if (type === 'item') setInventory(prev => [...prev, ...data]);
-      else if (type === 'vendor') setVendors(prev => [...prev, ...data]);
-      else if (type === 'vehicle') setVehicles(prev => [...prev, ...data]);
+      if (type === 'item' && insertedData) {
+        // Atualizar estado com os SKUs reais gerados pelo banco
+        const finalData = insertedData.map((dbRow: any) => ({
+          sku: dbRow.sku,
+          name: dbRow.name,
+          category: dbRow.category,
+          unit: dbRow.unit,
+          imageUrl: dbRow.image_url,
+          quantity: dbRow.quantity,
+          status: dbRow.status,
+          location: dbRow.location,
+          minQty: dbRow.min_qty,
+          maxQty: dbRow.max_qty,
+          batch: dbRow.batch || 'N/A',
+          expiry: dbRow.expiry || 'N/A'
+        }));
+        setInventory(prev => [...prev, ...finalData]);
+      } else if (type === 'vendor') {
+        setVendors(prev => [...prev, ...data]);
+      } else if (type === 'vehicle') {
+        setVehicles(prev => [...prev, ...data]);
+      }
 
       showNotification(`${data.length} registros importados com sucesso!`, 'success');
       addActivity('alerta', 'Importação XLSX', `${data.length} registros de ${type} adicionados`);
     } else {
-      showNotification('Erro ao importar registros. Verifique duplicidade de SKUs/Placas.', 'error');
+      showNotification('Erro ao importar registros. Verifique duplicidade de Código do Produto/Placas.', 'error');
       console.error('Import error:', error);
     }
   };
