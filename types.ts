@@ -84,6 +84,8 @@ export interface InventoryItem {
   unit: string;
   minQty: number;
   maxQty: number;
+  leadTime: number;
+  safetyStock: number;
 }
 
 export interface Quote {

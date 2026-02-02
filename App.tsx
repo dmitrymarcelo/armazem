@@ -47,7 +47,9 @@ const App: React.FC = () => {
           category: item.category,
           unit: item.unit || 'UN',
           minQty: item.min_qty,
-          maxQty: item.max_qty
+          maxQty: item.max_qty,
+          leadTime: item.lead_time || 7,
+          safetyStock: item.safety_stock || 5
         })));
 
         const { data: venData } = await supabase.from('vendors').select('*');
@@ -304,6 +306,64 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRecalculateROP = async () => {
+    showNotification('Iniciando recálculo dinâmico de ROP...', 'warning');
+
+    // 1. Filtrar saídas dos últimos 30 dias
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const relevantMovements = movements.filter(m => {
+      // Formato: "02/02/2026 15:30:00" ou similar
+      const [datePart] = m.timestamp.split(' ');
+      const [day, month, year] = datePart.split('/').map(Number);
+      const mDate = new Date(year, month - 1, day);
+      return m.type === 'saida' && mDate >= thirtyDaysAgo;
+    });
+
+    // 2. Calcular Uso Diário Médio (ADU) por SKU
+    const usageBySku: Record<string, number> = {};
+    relevantMovements.forEach(m => {
+      usageBySku[m.sku] = (usageBySku[m.sku] || 0) + m.quantity;
+    });
+
+    const updatedItems: InventoryItem[] = [];
+    let updateCount = 0;
+
+    for (const item of inventory) {
+      const totalUsage = usageBySku[item.sku] || 0;
+      const adu = totalUsage / 30; // Média diária nos últimos 30 dias
+
+      // ROP = (ADU * LeadTime) + SafetyStock
+      // Fallback para leadTime=7 e safetyStock=5 se estiverem indefinidos
+      const leadTime = item.leadTime || 7;
+      const safetyStock = item.safetyStock || 5;
+      const newMinQty = Math.ceil((adu * leadTime) + safetyStock);
+
+      if (newMinQty !== item.minQty) {
+        const { error } = await supabase.from('inventory').update({ min_qty: newMinQty }).eq('sku', item.sku);
+        if (!error) {
+          updatedItems.push({ ...item, minQty: newMinQty });
+          updateCount++;
+        } else {
+          updatedItems.push(item);
+        }
+      } else {
+        updatedItems.push(item);
+      }
+    }
+
+    if (updateCount > 0) {
+      setInventory(updatedItems);
+      showNotification(`ROP atualizado para ${updateCount} itens com base no histórico.`, 'success');
+      addActivity('alerta', 'ROP Recalculado', `${updateCount} itens tiveram seus níveis mínimos ajustados dinamicamente.`);
+      // Re-avaliar níveis de estoque com os novos mínimos
+      evaluateStockLevels(updatedItems);
+    } else {
+      showNotification('Nenhuma alteração de ROP necessária no momento.', 'success');
+    }
+  };
+
   const handleCreatePO = async (newOrder: PurchaseOrder) => {
     const orderWithStatus = { ...newOrder, status: 'requisicao' as const };
     const { error } = await supabase.from('purchase_orders').insert([{
@@ -432,7 +492,9 @@ const App: React.FC = () => {
       category: updatedItem.category,
       unit: updatedItem.unit,
       min_qty: updatedItem.minQty,
-      max_qty: updatedItem.maxQty
+      max_qty: updatedItem.maxQty,
+      lead_time: updatedItem.leadTime,
+      safety_stock: updatedItem.safetyStock
     }).eq('sku', updatedItem.sku);
 
     if (!error) {
@@ -480,7 +542,9 @@ const App: React.FC = () => {
           name: data.name,
           category: data.category,
           unit: data.unit,
-          image_url: data.imageUrl
+          image_url: data.imageUrl,
+          lead_time: data.leadTime || 7,
+          safety_stock: data.safetyStock || 5
         }).eq('sku', data.sku);
 
         if (!error) {
@@ -497,7 +561,9 @@ const App: React.FC = () => {
           status: 'disponivel',
           location: 'DOCA-01',
           min_qty: 10,
-          max_qty: 1000
+          max_qty: 1000,
+          lead_time: 7,
+          safety_stock: 5
         }]).select();
 
         if (!error && insertedData && insertedData[0]) {
@@ -510,7 +576,9 @@ const App: React.FC = () => {
             expiry: 'N/A',
             location: 'DOCA-01',
             minQty: 10,
-            maxQty: 1000
+            maxQty: 1000,
+            leadTime: 7,
+            safetyStock: 5
           };
           setInventory(prev => [...prev, newItem]);
           await recordMovement('entrada', newItem, 0, 'Criação de novo Código de Produto');
@@ -557,7 +625,9 @@ const App: React.FC = () => {
           status: d.status,
           location: d.location,
           min_qty: Math.round(Number(d.minQty) || 10),
-          max_qty: Math.round(Number(d.maxQty) || 1000)
+          max_qty: Math.round(Number(d.maxQty) || 1000),
+          lead_time: Math.round(Number(d.leadTime) || 7),
+          safety_stock: Math.round(Number(d.safetyStock) || 5)
         };
         // Se o SKU foi fornecido manualmente ou veio de um código existente, mantemos
         // Caso contrário, deixamos o DEFAULT do banco agir (omitindo a chave sku)
@@ -603,6 +673,8 @@ const App: React.FC = () => {
           location: dbRow.location,
           minQty: dbRow.min_qty,
           maxQty: dbRow.max_qty,
+          leadTime: dbRow.lead_time || 7,
+          safetyStock: dbRow.safety_stock || 5,
           batch: dbRow.batch || 'N/A',
           expiry: dbRow.expiry || 'N/A'
         }));
@@ -743,7 +815,14 @@ const App: React.FC = () => {
             />
           )}
           {activeModule === 'movimentacoes' && <Movements movements={movements} />}
-          {activeModule === 'estoque' && <Inventory items={inventory} onUpdateItem={handleUpdateInventoryItem} onCreateAutoPO={handleCreateAutoPO} />}
+          {activeModule === 'estoque' && (
+            <Inventory
+              items={inventory}
+              onUpdateItem={handleUpdateInventoryItem}
+              onCreateAutoPO={handleCreateAutoPO}
+              onRecalculateROP={handleRecalculateROP}
+            />
+          )}
           {activeModule === 'expedicao' && <Expedition inventory={inventory} onProcessPicking={handleProcessPicking} />}
           {activeModule === 'compras' && (
             <PurchaseOrders

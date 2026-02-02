@@ -7,9 +7,10 @@ interface InventoryProps {
   items?: InventoryItem[];
   onUpdateItem?: (item: InventoryItem) => void;
   onCreateAutoPO?: (item: InventoryItem) => void;
+  onRecalculateROP?: () => void;
 }
 
-export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, onCreateAutoPO }) => {
+export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, onCreateAutoPO, onRecalculateROP }) => {
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isOpsModalOpen, setIsOpsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -18,6 +19,8 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [minQty, setMinQty] = useState<number>(0);
   const [maxQty, setMaxQty] = useState<number>(0);
+  const [leadTime, setLeadTime] = useState<number>(7);
+  const [safetyStock, setSafetyStock] = useState<number>(5);
   const [calculatedStatus, setCalculatedStatus] = useState<InventoryItem['status']>('disponivel');
 
   const computeStatus = (qty: number, max: number, min: number, loc: string, exp: string): InventoryItem['status'] => {
@@ -41,6 +44,8 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
     setAdjustQty(item.quantity);
     setMinQty(item.minQty);
     setMaxQty(item.maxQty);
+    setLeadTime(item.leadTime || 7);
+    setSafetyStock(item.safetyStock || 5);
     setIsOpsModalOpen(true);
   };
 
@@ -52,6 +57,8 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
         quantity: adjustQty,
         minQty: minQty,
         maxQty: maxQty,
+        leadTime: leadTime,
+        safetyStock: safetyStock,
         status: calculatedStatus
       });
       setIsOpsModalOpen(false);
@@ -73,6 +80,17 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
           <h2 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">Estoque e Armazenamento</h2>
           <p className="text-slate-500 text-sm font-medium">Visualização unificada de saldos por Código de Produto no CD Manaus.</p>
         </div>
+
+        <button
+          onClick={onRecalculateROP}
+          className="px-6 py-3.5 bg-amber-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 hover:bg-amber-600 transition-all active:scale-95 flex items-center gap-3"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+          Recalcular ROP Dinâmico
+        </button>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/60 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -118,7 +136,10 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
                       <span className={`text-sm font-black ${item.quantity < item.minQty ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>
                         {item.quantity} {item.unit || 'un.'}
                       </span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">Min: {item.minQty} | Max: {item.maxQty}</span>
+                      <div className="flex flex-col gap-0.5 mt-1">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Min: {item.minQty} | Max: {item.maxQty}</span>
+                        <span className="text-[9px] font-black text-primary/70 uppercase">Lead Time: {item.leadTime || 7}d | Segurança: {item.safetyStock || 5}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -212,6 +233,37 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
                       onChange={(e) => setMaxQty(Number(e.target.value))}
                       className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-emerald-400 focus:ring-0 rounded-xl font-black text-sm transition-all text-emerald-500"
                     />
+                  </div>
+                </div>
+
+                {/* Parâmetros de ROP */}
+                <div className="space-y-4 col-span-1 md:col-span-2 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-slate-100 dark:border-slate-800">
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Configuração de ROP Dinâmico</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        Tempo de Reposição (Dias)
+                        <span className="p-1 bg-primary/10 text-primary rounded text-[8px]">Lead Time</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={leadTime}
+                        onChange={(e) => setLeadTime(Number(e.target.value))}
+                        className="w-full px-4 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-0 rounded-xl font-black text-sm transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        Estoque de Segurança
+                        <span className="p-1 bg-primary/10 text-primary rounded text-[8px]">Protection Stock</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={safetyStock}
+                        onChange={(e) => setSafetyStock(Number(e.target.value))}
+                        className="w-full px-4 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-0 rounded-xl font-black text-sm transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
