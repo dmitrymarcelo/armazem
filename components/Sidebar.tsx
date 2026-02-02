@@ -25,7 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeModule, onModuleChange, 
   return (
     <aside className="w-64 border-r border-[#dbe0e6] dark:border-[#2d3748] bg-white dark:bg-[#1a222c] flex flex-col hidden lg:flex flex-shrink-0 h-full">
       <div className="p-6 flex flex-col gap-2">
-        <img src="/norte_tech_logo.png" alt="Norte Tech Logo" className="h-16 object-contain w-fit" />
+        <img src={`${import.meta.env.BASE_URL}norte_tech_logo.png`} alt="Norte Tech Logo" className="h-16 object-contain w-fit" />
         <p className="text-[#617589] text-[10px] font-bold uppercase tracking-widest ml-1">Armazém 028</p>
       </div>
 

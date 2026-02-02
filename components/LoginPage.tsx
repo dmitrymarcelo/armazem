@@ -54,7 +54,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ users, onLogin }) => {
             {/* Esquerda: Imagem Hero */}
             <div className="hidden md:flex md:w-[65%] relative overflow-hidden bg-slate-800">
                 <img
-                    src="/login_hero.png"
+                    src={`${import.meta.env.BASE_URL}login_hero.png`}
                     alt="Hero"
                     className="absolute inset-0 w-full h-full object-cover opacity-80"
                 />
@@ -69,7 +69,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ users, onLogin }) => {
             <div className="flex-1 flex items-center justify-center p-8">
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-right duration-500">
                     <div className="flex flex-col items-center mb-8">
-                        <img src="/norte_tech_logo.png" alt="Norte Tech Logo" className="h-32 object-contain mb-4" />
+                        <img src={`${import.meta.env.BASE_URL}norte_tech_logo.png`} alt="Norte Tech Logo" className="h-32 object-contain mb-4" />
                         <p className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] mt-1 bg-slate-100 px-3 py-1 rounded-full">Acesso Restrito ao Sistema</p>
                     </div>
 
