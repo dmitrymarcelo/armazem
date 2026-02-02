@@ -80,7 +80,18 @@ const App: React.FC = () => {
         })));
 
         const { data: movData } = await supabase.from('movements').select('*').order('timestamp', { ascending: false });
-        if (movData) setMovements(movData);
+        if (movData) setMovements(movData.map(m => ({
+          id: m.id,
+          timestamp: m.timestamp,
+          type: m.type as Movement['type'],
+          sku: m.sku,
+          productName: m.product_name,
+          quantity: m.quantity,
+          user: m.user,
+          location: m.location,
+          reason: m.reason,
+          orderId: m.order_id
+        })));
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -176,7 +187,19 @@ const App: React.FC = () => {
       orderId: orderId
     };
 
-    const { error } = await supabase.from('movements').insert([newMovement]);
+    const { error } = await supabase.from('movements').insert([{
+      id: newMovement.id,
+      timestamp: newMovement.timestamp,
+      type: newMovement.type,
+      sku: newMovement.sku,
+      product_name: newMovement.productName,
+      quantity: newMovement.quantity,
+      user: newMovement.user,
+      location: newMovement.location,
+      reason: newMovement.reason,
+      order_id: newMovement.orderId
+    }]);
+
     if (!error) {
       setMovements(prev => [newMovement, ...prev]);
     } else {
