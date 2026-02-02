@@ -155,3 +155,12 @@ export interface User {
   modules: Module[];
   password?: string; // Optional for security in frontend display, required for logic
 }
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  read: boolean;
+  createdAt: string;
+  userId?: string;
+}

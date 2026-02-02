@@ -11,7 +11,7 @@ import { PurchaseOrders } from './pages/PurchaseOrders';
 import { MasterData } from './pages/MasterData';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
-import { Module, InventoryItem, Activity, Movement, Vendor, Vehicle, PurchaseOrder, Quote, ApprovalRecord, User } from './types';
+import { Module, InventoryItem, Activity, Movement, Vendor, Vehicle, PurchaseOrder, Quote, ApprovalRecord, User, AppNotification } from './types';
 import { LoginPage } from './components/LoginPage';
 import { supabase } from './supabase';
 
@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Supabase Data Fetching
@@ -95,12 +96,44 @@ const App: React.FC = () => {
           orderId: m.order_id
         })));
 
+        const { data: notifData } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(20);
+        if (notifData) setAppNotifications(notifData.map(n => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type as AppNotification['type'],
+          read: n.read,
+          createdAt: n.created_at,
+          userId: n.user_id
+        })));
+
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
 
     fetchData();
+
+    // Subscribe to new notifications
+    const channel = supabase
+      .channel('notifications-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
+        const newNotif = payload.new as any;
+        setAppNotifications(prev => [{
+          id: newNotif.id,
+          title: newNotif.title,
+          message: newNotif.message,
+          type: newNotif.type as AppNotification['type'],
+          read: newNotif.read,
+          createdAt: newNotif.created_at,
+          userId: newNotif.user_id
+        }, ...prev].slice(0, 20));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleAddUser = async (newUser: User) => {
@@ -173,6 +206,35 @@ const App: React.FC = () => {
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
     setActivities(prev => [newActivity, ...prev.slice(0, 19)]);
+  };
+
+  const addNotification = async (title: string, message: string, type: AppNotification['type']) => {
+    const { data: newNotif, error } = await supabase.from('notifications').insert([{
+      title,
+      message,
+      type,
+      read: false
+    }]).select().single();
+
+    if (!error && newNotif) {
+      // Local state update is handled by the real-time subscription in useEffect
+      // but we can also set the temporary toast
+      showNotification(title, type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success');
+    }
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+    if (!error) {
+      setAppNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('read', false);
+    if (!error) {
+      setAppNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    }
   };
 
   const recordMovement = async (type: Movement['type'], item: InventoryItem, quantity: number, reason: string, orderId?: string) => {
@@ -248,7 +310,11 @@ const App: React.FC = () => {
           if (!error) {
             setPurchaseOrders(prev => [autoPO, ...prev]);
             addActivity('alerta', 'Reposição Automática', `Pedido gerado para ${item.sku} (Saldo: ${item.quantity})`);
-            showNotification(`Estoque Crítico! Reposição gerada para ${item.sku}`, 'warning');
+            addNotification(
+              `Estoque Crítico: ${item.sku}`,
+              `Saldo de ${item.quantity} está abaixo do mínimo (${item.minQty}). Requisição de compra ${autoPO.id} gerada.`,
+              'warning'
+            );
           }
         }
       }
@@ -276,6 +342,11 @@ const App: React.FC = () => {
     if (!error) {
       setPurchaseOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'aprovado', approvalHistory: newApprovalHistory } : o));
       addActivity('compra', 'Aprovação de Pedido', `Requisição ${id} aprovada - pronta para envio`);
+      addNotification(
+        `Aprovação: ${id}`,
+        `Pedido aprovado e pronto para envio ao fornecedor.`,
+        'success'
+      );
       showNotification(`Pedido ${id} aprovado! Marque como enviado quando despachar.`, 'success');
     }
   };
@@ -302,6 +373,11 @@ const App: React.FC = () => {
     if (!error) {
       setPurchaseOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'requisicao', approvalHistory: newApprovalHistory } : o));
       addActivity('alerta', 'Pedido Rejeitado', `Requisição ${id} retornou para cotação`);
+      addNotification(
+        `Rejeição: ${id}`,
+        `Pedido rejeitado. Justificativa: ${reason || 'Sem justificativa'}.`,
+        'error'
+      );
       showNotification(`Pedido ${id} rejeitado. Refaça as cotações.`, 'warning');
     }
   };
@@ -425,6 +501,11 @@ const App: React.FC = () => {
         quotes: updatedQuotes
       } : o));
       addActivity('compra', 'Cotações Enviadas', `Pedido ${poId} enviado para aprovação do gestor`);
+      addNotification(
+        `Pendente: ${poId}`,
+        `Pedido enviado para sua aprovação. Vendor: ${selectedQuote.vendorName}.`,
+        'info'
+      );
       showNotification(`Pedido ${poId} enviado para aprovação!`, 'success');
     }
   };
@@ -529,6 +610,11 @@ const App: React.FC = () => {
       if (!error) {
         setPurchaseOrders(prev => prev.map(po => po.id === poId ? { ...po, status: 'recebido' } : po));
         addActivity('recebimento', 'Recebimento Finalizado', `Carga ${poId} conferida e armazenada`);
+        addNotification(
+          `Recebimento: ${poId}`,
+          `Carga recebida com sucesso. Estoque atualizado.`,
+          'success'
+        );
       }
     }
 
@@ -802,6 +888,9 @@ const App: React.FC = () => {
           title={getPageTitle(activeModule)}
           user={user}
           onLogout={logout}
+          notifications={appNotifications}
+          onMarkAsRead={markNotificationAsRead}
+          onMarkAllAsRead={markAllNotificationsAsRead}
         />
         <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6 lg:p-10 relative">
           {notification && (

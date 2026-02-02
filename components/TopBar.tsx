@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '../types';
+import { User, AppNotification } from '../types';
 
 interface TopBarProps {
   isDarkMode: boolean;
@@ -7,17 +7,23 @@ interface TopBarProps {
   title: string;
   user: User | null;
   onLogout: () => void;
+  notifications: AppNotification[];
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ isDarkMode, toggleDarkMode, title, user, onLogout }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  isDarkMode,
+  toggleDarkMode,
+  title,
+  user,
+  onLogout,
+  notifications,
+  onMarkAsRead,
+  onMarkAllAsRead
+}) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
-  const [notifications] = React.useState([
-    { id: 1, title: 'Novo Pedido #1023', time: '5 min atrás', type: 'info', read: false },
-    { id: 2, title: 'Estoque Crítico: Monitor 24"', time: '1 hora atrás', type: 'warning', read: false },
-    { id: 3, title: 'Entrada Confirmada: NF-e 4590', time: '2 horas atrás', type: 'success', read: true },
-    { id: 4, title: 'Meta de Expedição Atingida', time: '5 horas atrás', type: 'success', read: true },
-  ]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -68,11 +74,20 @@ export const TopBar: React.FC<TopBarProps> = ({ isDarkMode, toggleDarkMode, titl
               <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Notificações</h3>
-                  <button className="text-[10px] font-bold text-primary hover:underline">Marcar todas como lidas</button>
+                  <button
+                    onClick={onMarkAllAsRead}
+                    className="text-[10px] font-bold text-primary hover:underline"
+                  >
+                    Marcar todas como lidas
+                  </button>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
-                  {notifications.map(notification => (
-                    <div key={notification.id} className={`p-4 border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                  {notifications.length > 0 ? notifications.map(notification => (
+                    <div
+                      key={notification.id}
+                      onClick={() => !notification.read && onMarkAsRead(notification.id)}
+                      className={`p-4 border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                    >
                       <div className="flex items-start gap-3">
                         <div className={`mt-1 size-2 rounded-full flex-shrink-0 ${notification.type === 'warning' ? 'bg-amber-500' :
                           notification.type === 'success' ? 'bg-emerald-500' : 'bg-blue-500'
@@ -81,11 +96,17 @@ export const TopBar: React.FC<TopBarProps> = ({ isDarkMode, toggleDarkMode, titl
                           <p className={`text-xs ${!notification.read ? 'font-black text-slate-800 dark:text-white' : 'font-medium text-slate-500 dark:text-slate-400'}`}>
                             {notification.title}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-bold mt-1">{notification.time}</p>
+                          <p className="text-[10px] text-slate-400 font-bold mt-1">
+                            {new Date(notification.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-10 text-center text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Nenhuma notificação
+                    </div>
+                  )}
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/30 text-center border-t border-slate-100 dark:border-slate-800">
                   <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-blue-600 transition-colors">
