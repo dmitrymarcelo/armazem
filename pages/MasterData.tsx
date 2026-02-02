@@ -393,9 +393,19 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Categoria</label>
                       <select required value={formData.category || ''} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-sm">
                         <option value="">Selecione...</option>
-                        <option value="Eletrônicos">Eletrônicos</option>
-                        <option value="Alimentos">Alimentos</option>
-                        <option value="Ferramentas">Ferramentas</option>
+                        <option value="Equipamentos">Equipamentos</option>
+                        <option value="Máquinas">Máquinas</option>
+                        <option value="Ferramentas Manuais">Ferramentas Manuais</option>
+                        <option value="Pneumáticas">Pneumáticas</option>
+                        <option value="Elétricas">Elétricas</option>
+                        <option value="Motor">Motor</option>
+                        <option value="Freios">Freios</option>
+                        <option value="Suspensão">Suspensão</option>
+                        <option value="Direção">Direção</option>
+                        <option value="Insumos Químicos">Insumos Químicos</option>
+                        <option value="Lubrificantes">Lubrificantes</option>
+                        <option value="Fluidos">Fluidos</option>
+                        <option value="Óleos">Óleos</option>
                       </select>
                     </div>
                     <div className="space-y-2">
