@@ -81,6 +81,7 @@ export interface InventoryItem {
   status: 'disponivel' | 'vencimento' | 'transito' | 'divergente' | 'excesso';
   imageUrl: string;
   category: string;
+  unit: string;
   minQty: number;
   maxQty: number;
 }

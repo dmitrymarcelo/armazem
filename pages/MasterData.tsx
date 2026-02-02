@@ -52,7 +52,7 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
     let fileName = '';
 
     if (activeTab === 'itens') {
-      headers = ['sku', 'name', 'quantity', 'status', 'image_url', 'category', 'min_qty', 'max_qty'];
+      headers = ['sku', 'name', 'quantity', 'status', 'image_url', 'category', 'unit', 'min_qty', 'max_qty'];
       fileName = 'template_itens_supabase.xlsx';
     } else if (activeTab === 'fornecedores') {
       headers = ['NOME', 'CNPJ', 'CONTATO', 'STATUS'];
@@ -316,6 +316,19 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
                         <option value="Eletrônicos">Eletrônicos</option>
                         <option value="Alimentos">Alimentos</option>
                         <option value="Ferramentas">Ferramentas</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Unidade de Medida</label>
+                      <select required value={formData.unit || ''} onChange={e => setFormData({ ...formData, unit: e.target.value })} className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-bold text-sm">
+                        <option value="">Selecione...</option>
+                        <option value="UN">UN - Unidade</option>
+                        <option value="KG">KG - Quilograma</option>
+                        <option value="LT">LT - Litro</option>
+                        <option value="MT">MT - Metro</option>
+                        <option value="CX">CX - Caixa</option>
+                        <option value="FD">FD - Fardo</option>
+                        <option value="PCT">PCT - Pacote</option>
                       </select>
                     </div>
                     <div className="space-y-2 col-span-2">

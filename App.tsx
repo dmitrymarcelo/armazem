@@ -45,6 +45,7 @@ const App: React.FC = () => {
           status: item.status,
           imageUrl: item.image_url,
           category: item.category,
+          unit: item.unit || 'UN',
           minQty: item.min_qty,
           maxQty: item.max_qty
         })));
@@ -406,6 +407,7 @@ const App: React.FC = () => {
       status: updatedItem.status,
       image_url: updatedItem.imageUrl,
       category: updatedItem.category,
+      unit: updatedItem.unit,
       min_qty: updatedItem.minQty,
       max_qty: updatedItem.maxQty
     }).eq('sku', updatedItem.sku);
@@ -454,6 +456,7 @@ const App: React.FC = () => {
         const { error } = await supabase.from('inventory').update({
           name: data.name,
           category: data.category,
+          unit: data.unit,
           image_url: data.imageUrl
         }).eq('sku', data.sku);
 
@@ -466,6 +469,7 @@ const App: React.FC = () => {
           sku: newItem.sku,
           name: newItem.name,
           category: newItem.category,
+          unit: newItem.unit,
           image_url: newItem.imageUrl,
           quantity: 0,
           status: 'disponivel',
