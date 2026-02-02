@@ -34,6 +34,7 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
   const [quotingPO, setQuotingPO] = useState<PurchaseOrder | null>(null);
   const [sendingPO, setSendingPO] = useState<PurchaseOrder | null>(null);
   const [vendorOrderNum, setVendorOrderNum] = useState('');
+  const [quotationMode, setQuotationMode] = useState<'edit' | 'analyze'>('edit');
 
   // Form State
   const [selectedVendor, setSelectedVendor] = useState('');
@@ -124,6 +125,36 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
 
   const handleOpenQuotationModal = (order: PurchaseOrder) => {
     setQuotingPO(order);
+    setQuotationMode('edit');
+    setIsQuotationModalOpen(true);
+  };
+
+  const handleOpenAnalyzeQuotation = (order: PurchaseOrder) => {
+    setQuotingPO(order);
+    setQuotationMode('analyze');
+
+    // Pre-fill existing quotes
+    if (order.quotes) {
+      if (order.quotes[0]) {
+        setQuote1Vendor(order.quotes[0].vendorId);
+        setQuote1Price(order.quotes[0].totalValue.toString());
+        setQuote1Notes(order.quotes[0].notes || '');
+        setQuote1Valid(order.quotes[0].validUntil);
+      }
+      if (order.quotes[1]) {
+        setQuote2Vendor(order.quotes[1].vendorId);
+        setQuote2Price(order.quotes[1].totalValue.toString());
+        setQuote2Notes(order.quotes[1].notes || '');
+        setQuote2Valid(order.quotes[1].validUntil);
+      }
+      if (order.quotes[2]) {
+        setQuote3Vendor(order.quotes[2].vendorId);
+        setQuote3Price(order.quotes[2].totalValue.toString());
+        setQuote3Notes(order.quotes[2].notes || '');
+        setQuote3Valid(order.quotes[2].validUntil);
+      }
+    }
+
     setIsQuotationModalOpen(true);
   };
 
@@ -366,10 +397,10 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                             Rejeitar
                           </button>
                           <button
-                            onClick={() => onApprove(order.id)}
+                            onClick={() => handleOpenAnalyzeQuotation(order)}
                             className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all active:scale-95"
                           >
-                            Aprovar
+                            Analisar e Aprovar
                           </button>
                         </>
                       )}
@@ -662,8 +693,12 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
           <div className="bg-white dark:bg-slate-900 w-full max-w-6xl rounded-[3.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
               <div>
-                <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Adicionar Cotações</h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Pedido {quotingPO.id} - 3 Fornecedores Obrigatórios</p>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
+                  {quotationMode === 'analyze' ? 'Análise de Cotações p/ Aprovação' : 'Adicionar Cotações'}
+                </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  {quotationMode === 'analyze' ? `Revisão do Pedido ${quotingPO.id}` : `Pedido ${quotingPO.id} - 3 Fornecedores Obrigatórios`}
+                </p>
               </div>
               <button onClick={() => { setIsQuotationModalOpen(false); resetQuotationForm(); }} className="size-12 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-400 hover:text-red-500 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -703,9 +738,14 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
             <div className="p-10 grid grid-cols-1 lg:grid-cols-3 gap-8 pt-2">
               {/* Cotação 1 */}
               <div className="space-y-4 p-6 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border-2 border-amber-200 dark:border-amber-800">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="size-8 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-black">1</span>
-                  <h4 className="text-sm font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Primeira Cotação</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="size-8 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm font-black">1</span>
+                    <h4 className="text-sm font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Primeira Cotação</h4>
+                  </div>
+                  {quotationMode === 'analyze' && quotingPO?.selectedQuoteId === quotingPO?.quotes?.[0]?.id && (
+                    <span className="px-3 py-1 bg-amber-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest animate-pulse">Sugerido/Selecionado</span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -713,7 +753,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                   <select
                     value={quote1Vendor}
                     onChange={e => setQuote1Vendor(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-700 rounded-xl font-bold text-sm focus:border-amber-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all resize-none ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-amber-200 dark:border-amber-700 focus:border-amber-500'}`}
                   >
                     <option value="">Selecione...</option>
                     {vendors.filter(v => v.status === 'Ativo').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -728,7 +769,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     value={quote1Price}
                     onChange={e => setQuote1Price(e.target.value)}
                     placeholder="R$ 0,00"
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-700 rounded-xl font-bold text-sm focus:border-amber-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70 cursor-not-allowed' : 'border-amber-200 dark:border-amber-700 focus:border-amber-500'}`}
                   />
                 </div>
 
@@ -738,7 +780,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     type="date"
                     value={quote1Valid}
                     onChange={e => setQuote1Valid(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-700 rounded-xl font-bold text-sm focus:border-amber-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70 cursor-not-allowed' : 'border-amber-200 dark:border-amber-700 focus:border-amber-500'}`}
                   />
                 </div>
 
@@ -749,16 +792,22 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     onChange={e => setQuote1Notes(e.target.value)}
                     rows={3}
                     placeholder="Condições, prazos..."
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-amber-200 dark:border-amber-700 rounded-xl font-bold text-sm focus:border-amber-500 transition-all resize-none"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all resize-none ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70 cursor-not-allowed' : 'border-amber-200 dark:border-amber-700 focus:border-amber-500'}`}
                   />
                 </div>
               </div>
 
               {/* Cotação 2 */}
               <div className="space-y-4 p-6 bg-orange-50 dark:bg-orange-900/10 rounded-3xl border-2 border-orange-200 dark:border-orange-800">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="size-8 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-black">2</span>
-                  <h4 className="text-sm font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest">Segunda Cotação</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="size-8 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-black">2</span>
+                    <h4 className="text-sm font-black text-orange-700 dark:text-orange-400 uppercase tracking-widest">Segunda Cotação</h4>
+                  </div>
+                  {quotationMode === 'analyze' && quotingPO?.selectedQuoteId === quotingPO?.quotes?.[1]?.id && (
+                    <span className="px-3 py-1 bg-orange-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest animate-pulse">Sugerido/Selecionado</span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -766,7 +815,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                   <select
                     value={quote2Vendor}
                     onChange={e => setQuote2Vendor(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-orange-200 dark:border-orange-700 rounded-xl font-bold text-sm focus:border-orange-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
                   >
                     <option value="">Selecione...</option>
                     {vendors.filter(v => v.status === 'Ativo').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -781,7 +831,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     value={quote2Price}
                     onChange={e => setQuote2Price(e.target.value)}
                     placeholder="R$ 0,00"
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-orange-200 dark:border-orange-700 rounded-xl font-bold text-sm focus:border-orange-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
                   />
                 </div>
 
@@ -791,7 +842,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     type="date"
                     value={quote2Valid}
                     onChange={e => setQuote2Valid(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-orange-200 dark:border-orange-700 rounded-xl font-bold text-sm focus:border-orange-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
                   />
                 </div>
 
@@ -802,16 +854,22 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     onChange={e => setQuote2Notes(e.target.value)}
                     rows={3}
                     placeholder="Condições, prazos..."
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-orange-200 dark:border-orange-700 rounded-xl font-bold text-sm focus:border-orange-500 transition-all resize-none"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all resize-none ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
                   />
                 </div>
               </div>
 
               {/* Cotação 3 */}
               <div className="space-y-4 p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl border-2 border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="size-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-black">3</span>
-                  <h4 className="text-sm font-black text-red-700 dark:text-red-400 uppercase tracking-widest">Terceira Cotação</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="size-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-black">3</span>
+                    <h4 className="text-sm font-black text-red-700 dark:text-red-400 uppercase tracking-widest">Terceira Cotação</h4>
+                  </div>
+                  {quotationMode === 'analyze' && quotingPO?.selectedQuoteId === quotingPO?.quotes?.[2]?.id && (
+                    <span className="px-3 py-1 bg-red-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest animate-pulse">Sugerido/Selecionado</span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -819,7 +877,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                   <select
                     value={quote3Vendor}
                     onChange={e => setQuote3Vendor(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-red-200 dark:border-red-700 rounded-xl font-bold text-sm focus:border-red-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-red-200 dark:border-red-700 focus:border-red-500'}`}
                   >
                     <option value="">Selecione...</option>
                     {vendors.filter(v => v.status === 'Ativo').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -834,7 +893,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     value={quote3Price}
                     onChange={e => setQuote3Price(e.target.value)}
                     placeholder="R$ 0,00"
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-red-200 dark:border-red-700 rounded-xl font-bold text-sm focus:border-red-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-red-200 dark:border-red-700 focus:border-red-500'}`}
                   />
                 </div>
 
@@ -844,7 +904,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     type="date"
                     value={quote3Valid}
                     onChange={e => setQuote3Valid(e.target.value)}
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-red-200 dark:border-red-700 rounded-xl font-bold text-sm focus:border-red-500 transition-all"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-red-200 dark:border-red-700 focus:border-red-500'}`}
                   />
                 </div>
 
@@ -855,7 +916,8 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                     onChange={e => setQuote3Notes(e.target.value)}
                     rows={3}
                     placeholder="Condições, prazos..."
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-red-200 dark:border-red-700 rounded-xl font-bold text-sm focus:border-red-500 transition-all resize-none"
+                    disabled={quotationMode === 'analyze'}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all resize-none ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-red-200 dark:border-red-700 focus:border-red-500'}`}
                   />
                 </div>
               </div>
@@ -863,7 +925,25 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
 
             <div className="p-10 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-6">
               <button onClick={() => { setIsQuotationModalOpen(false); resetQuotationForm(); }} className="flex-1 py-5 bg-white dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 rounded-3xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Cancelar</button>
-              <button onClick={handleSubmitQuotations} className="flex-[2] py-5 bg-amber-500 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95">Salvar Cotações</button>
+
+              {quotationMode === 'edit' ? (
+                <button onClick={handleSubmitQuotations} className="flex-[2] py-5 bg-amber-500 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-amber-500/30 hover:bg-amber-600 transition-all active:scale-95">Salvar Cotações</button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { onReject(quotingPO.id); setIsQuotationModalOpen(false); resetQuotationForm(); }}
+                    className="flex-1 py-5 bg-red-500 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-red-500/30 hover:bg-red-600 transition-all active:scale-95"
+                  >
+                    Rejeitar Pedido
+                  </button>
+                  <button
+                    onClick={() => { onApprove(quotingPO.id); setIsQuotationModalOpen(false); resetQuotationForm(); }}
+                    className="flex-[2] py-5 bg-green-500 text-white rounded-3xl text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-green-500/30 hover:bg-green-600 transition-all active:scale-95"
+                  >
+                    Aprovar Agora
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
