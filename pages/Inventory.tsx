@@ -116,7 +116,7 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className={`text-sm font-black ${item.quantity < item.minQty ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                        {item.quantity} un.
+                        {item.quantity} {item.unit || 'un.'}
                       </span>
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Min: {item.minQty} | Max: {item.maxQty}</span>
                     </div>
@@ -180,12 +180,17 @@ export const Inventory: React.FC<InventoryProps> = ({ items = [], onUpdateItem, 
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Físico Atual</label>
-                    <input
-                      type="number"
-                      value={adjustQty}
-                      onChange={(e) => setAdjustQty(Number(e.target.value))}
-                      className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary focus:ring-0 rounded-xl font-black text-sm transition-all text-slate-800 dark:text-white"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={adjustQty}
+                        onChange={(e) => setAdjustQty(Number(e.target.value))}
+                        className="flex-1 px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-primary focus:ring-0 rounded-xl font-black text-sm transition-all text-slate-800 dark:text-white"
+                      />
+                      <div className="px-4 py-3.5 bg-slate-100 dark:bg-slate-700 border-2 border-transparent rounded-xl font-black text-sm text-slate-500 flex items-center">
+                        {selectedItem.unit || 'UN'}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

@@ -129,8 +129,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, activities }) =
                 <div key={i} className="p-5 rounded-3xl border border-red-100 bg-red-50/30 dark:bg-red-900/10 dark:border-red-900/30">
                   <p className="text-base font-black uppercase pr-2 leading-tight text-slate-800 dark:text-white truncate">{item.name}</p>
                   <div className="mt-2 flex items-center justify-between text-[10px] font-black uppercase text-slate-400">
-                    <span>Saldo: <span className="text-red-600">{item.quantity}</span></span>
-                    <span>Mín: {item.minQty}</span>
+                    <span>Saldo: <span className="text-red-600">{item.quantity} {item.unit || 'UN'}</span></span>
+                    <span>Mín: {item.minQty} {item.unit || 'UN'}</span>
                   </div>
                 </div>
               ))}
