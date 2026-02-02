@@ -53,8 +53,8 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
     let fileName = '';
 
     if (activeTab === 'itens') {
-      headers = ['Nome', 'Unidade de Medida', 'Categoria', 'Quantidade', 'MinQty', 'MaxQty'];
-      fileName = 'template_itens_supabase.xlsx';
+      headers = ['Nome', 'Unidade de Medida', 'Quantidade'];
+      fileName = 'template_itens_logiwms.xlsx';
     } else if (activeTab === 'fornecedores') {
       headers = ['NOME', 'CNPJ', 'CONTATO', 'STATUS'];
       fileName = 'template_fornecedores_logiwms.xlsx';
@@ -89,17 +89,17 @@ export const MasterData: React.FC<MasterDataProps> = ({ inventory, vendors, vehi
       if (activeTab === 'itens') {
         mappedData = data.map((row: any) => {
           // O SKU será gerado automaticamente pelo Supabase se omitido
-          const sku = row['SKU'] || row['Código do Produto'] || '';
+          const sku = '';
 
           return {
             sku: sku,
             name: row['Nome'] || 'Produto Sem Nome',
             unit: row['Unidade de Medida'] || 'UN',
-            category: row['Categoria'] || 'Geral',
+            category: 'Geral', // Categoria padrão caso não venha no Excel
             quantity: Number(row['Quantidade']) || 0,
-            minQty: Number(row['MinQty']) || 10,
-            maxQty: Number(row['MaxQty']) || 1000,
-            imageUrl: row['URL'] || 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80',
+            minQty: 10,  // Valor padrão
+            maxQty: 1000, // Valor padrão
+            imageUrl: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80',
             status: 'disponivel',
             batch: 'N/A',
             expiry: 'N/A',
