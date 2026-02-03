@@ -777,10 +777,9 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TEMPO DE ENTREGA</label>
                   <input
-                    type="text"
+                    type="date"
                     value={quote1Valid}
                     onChange={e => setQuote1Valid(e.target.value)}
-                    placeholder="Ex: 7 dias"
                     disabled={quotationMode === 'analyze'}
                     className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70 cursor-not-allowed' : 'border-amber-200 dark:border-amber-700 focus:border-amber-500'}`}
                   />
@@ -840,12 +839,11 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TEMPO DE ENTREGA</label>
                   <input
-                    type="text"
+                    type="date"
                     value={quote2Valid}
                     onChange={e => setQuote2Valid(e.target.value)}
-                    placeholder="Ex: 5 dias"
                     disabled={quotationMode === 'analyze'}
-                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
+                    className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70 cursor-not-allowed' : 'border-orange-200 dark:border-orange-700 focus:border-orange-500'}`}
                   />
                 </div>
 
@@ -903,10 +901,9 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TEMPO DE ENTREGA</label>
                   <input
-                    type="text"
+                    type="date"
                     value={quote3Valid}
                     onChange={e => setQuote3Valid(e.target.value)}
-                    placeholder="Ex: 10 dias"
                     disabled={quotationMode === 'analyze'}
                     className={`w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl font-bold text-sm transition-all ${quotationMode === 'analyze' ? 'border-slate-100 dark:border-slate-700 opacity-70' : 'border-red-200 dark:border-red-700 focus:border-red-500'}`}
                   />
