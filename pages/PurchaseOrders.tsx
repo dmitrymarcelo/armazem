@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { PurchaseOrder, Vendor, InventoryItem, Quote, User, PO_STATUS_LABELS } from '../types';
 
 interface PurchaseOrdersProps {
@@ -60,11 +60,33 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
   const [draftSku, setDraftSku] = useState('');
   const [draftQty, setDraftQty] = useState(0);
   const [draftPrice, setDraftPrice] = useState(0);
+  const [itemSearch, setItemSearch] = useState('');
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Get selected product details for preview (Header of Sub-Form)
   const selectedProductPreview = useMemo(() => {
     return inventory.find(p => p.sku === draftSku);
   }, [draftSku, inventory]);
+
+  const filteredSearchItems = useMemo(() => {
+    const search = itemSearch.toLowerCase().trim();
+    if (!search) return [];
+    return inventory
+      .filter(i => i.sku.toLowerCase().includes(search) || i.name.toLowerCase().includes(search))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, 8);
+  }, [itemSearch, inventory]);
 
   const totalOrder = useMemo(() => itemsList.reduce((acc, curr) => acc + (curr.qty * curr.price), 0), [itemsList]);
 
@@ -83,6 +105,7 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     setDraftSku('');
     setDraftQty(0);
     setDraftPrice(0);
+    setItemSearch('');
   };
 
   const handleFinalize = () => {
@@ -549,16 +572,64 @@ export const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-8">
+                    <div className="md:col-span-8 relative" ref={searchRef}>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Produto / Cód. Produto</label>
-                      <select
-                        value={draftSku}
-                        onChange={e => setDraftSku(e.target.value)}
-                        className="w-full px-4 py-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-black focus:border-primary transition-all"
-                      >
-                        <option value="">Buscar Produto no Catálogo Master...</option>
-                        {inventory.map(i => <option key={i.sku} value={i.sku}>{i.sku} - {i.name}</option>)}
-                      </select>
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          value={draftSku ? `${draftSku} - ${selectedProductPreview?.name}` : itemSearch}
+                          onChange={(e) => {
+                            setItemSearch(e.target.value);
+                            if (draftSku) setDraftSku('');
+                            setIsSearchDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsSearchDropdownOpen(true)}
+                          placeholder="Buscar Produto no Catálogo Master..."
+                          className="w-full px-4 py-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-black focus:border-primary transition-all pr-12"
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                          </svg>
+                        </div>
+
+                        {/* Dropdown de Autocomplete */}
+                        {isSearchDropdownOpen && itemSearch && !draftSku && (
+                          <div className="absolute z-[110] left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            {filteredSearchItems.length > 0 ? (
+                              <div className="p-2">
+                                {filteredSearchItems.map(item => (
+                                  <button
+                                    key={item.sku}
+                                    onClick={() => {
+                                      setDraftSku(item.sku);
+                                      setItemSearch(item.name);
+                                      setIsSearchDropdownOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all text-left group"
+                                  >
+                                    <div className="size-10 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 border border-slate-50 dark:border-slate-700">
+                                      <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-black text-slate-800 dark:text-white truncate">{item.name}</p>
+                                      <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-0.5">Cód. {item.sku}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase">Saldo</p>
+                                      <p className="text-xs font-black text-slate-800 dark:text-white">{item.quantity} un.</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-8 text-center text-slate-400">
+                                <p className="text-[10px] font-black uppercase tracking-widest">Nenhum produto encontrado</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Qtd</label>

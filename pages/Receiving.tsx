@@ -77,6 +77,24 @@ export const Receiving: React.FC<ReceivingProps> = ({ onFinalize, availablePOs }
     })));
   };
 
+  const handleTotalReceipt = () => {
+    if (!selectedPO) return;
+
+    const confirmed = window.confirm(
+      "Atenção: O recebimento total ignora a conferência item a item. Certifique-se de que a carga física corresponde exatamente à Nota Fiscal para evitar furos de estoque. Confirmar entrada total?"
+    );
+
+    if (confirmed) {
+      const fullItems = items.map(item => ({
+        ...item,
+        received: item.expected,
+        status: 'ok' as const
+      }));
+      setItems(fullItems);
+      onFinalize(fullItems, selectedPO);
+    }
+  };
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'ok': return 'CONCLUÍDO';
@@ -112,7 +130,14 @@ export const Receiving: React.FC<ReceivingProps> = ({ onFinalize, availablePOs }
           </div>
         </div>
         <div className="flex items-center gap-2 p-2">
-          {/* Botão SIMULAR removido conforme solicitação */}
+          {selectedPO && (
+            <button
+              onClick={handleTotalReceipt}
+              className="px-6 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black hover:bg-slate-200 transition-all h-10 border border-slate-200 dark:border-slate-700"
+            >
+              RECEBIMENTO TOTAL
+            </button>
+          )}
 
           <button
             onClick={() => onFinalize(items.filter(i => i.received > 0), selectedPO)}

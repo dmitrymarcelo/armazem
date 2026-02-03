@@ -455,6 +455,42 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSyncAutoPOs = async (manualItems: { sku: string; qty: number }[]) => {
+    // Filtra pedidos automáticos ativos (não recebidos ou rejeitados)
+    const autoPOs = purchaseOrders.filter(po =>
+      po.id.startsWith('AUTO-') &&
+      ['requisicao', 'cotacao', 'pendente', 'aprovado'].includes(po.status)
+    );
+
+    for (const manual of manualItems) {
+      for (const auto of autoPOs) {
+        const itemIdx = auto.items.findIndex(i => i.sku === manual.sku);
+        if (itemIdx > -1) {
+          const currentQty = auto.items[itemIdx].qty;
+          const newQty = Math.max(0, currentQty - manual.qty);
+
+          let updatedItems;
+          if (newQty === 0) {
+            updatedItems = auto.items.filter(i => i.sku !== manual.sku);
+          } else {
+            updatedItems = auto.items.map(i => i.sku === manual.sku ? { ...i, qty: newQty } : i);
+          }
+
+          if (updatedItems.length === 0) {
+            // Rejeita/Cancela o pedido se ficar vazio
+            await supabase.from('purchase_orders').update({ status: 'rejeitado' }).eq('id', auto.id);
+            setPurchaseOrders(prev => prev.map(p => p.id === auto.id ? { ...p, status: 'rejeitado' as const } : p));
+            showNotification(`Pedido AUTO ${auto.id} cancelado: suprido por manual.`, 'success');
+          } else {
+            // Atualiza quantidades
+            await supabase.from('purchase_orders').update({ items: updatedItems }).eq('id', auto.id);
+            setPurchaseOrders(prev => prev.map(p => p.id === auto.id ? { ...p, items: updatedItems } : p));
+          }
+        }
+      }
+    }
+  };
+
   const handleCreatePO = async (newOrder: PurchaseOrder) => {
     const orderWithStatus = { ...newOrder, status: 'requisicao' as const };
     const { error } = await supabase.from('purchase_orders').insert([{
@@ -469,6 +505,9 @@ const App: React.FC = () => {
     }]);
 
     if (!error) {
+      // Sincronizar com pedidos automáticos para evitar duplicidade
+      await handleSyncAutoPOs(orderWithStatus.items.map(i => ({ sku: i.sku, qty: i.qty })));
+
       setPurchaseOrders(prev => [orderWithStatus, ...prev]);
       addActivity('compra', 'Nova Requisição', `Pedido manual ${orderWithStatus.id} criado - aguardando cotações`);
       showNotification(`Pedido ${orderWithStatus.id} criado! Adicione 3 cotações para prosseguir.`, 'success');
@@ -767,6 +806,9 @@ const App: React.FC = () => {
       }
     }
     setInventory(newInventory);
+
+    // Sincronizar com pedidos automáticos baseados no que foi recebido
+    await handleSyncAutoPOs(receivedItems.map(r => ({ sku: r.sku, qty: r.received })));
 
     if (poId) {
       const { error } = await supabase.from('purchase_orders').update({ status: 'recebido' }).eq('id', poId);
