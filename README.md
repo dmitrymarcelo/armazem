@@ -1,7 +1,7 @@
 ﻿<div align="center">
   
-  # ðŸ“¦ LogiWMS-Pro
-  ### GestÃ£o Inteligente de ArmazÃ©m - Sistema WMS Completo
+  # �Y"� LogiWMS-Pro
+  ### Gestão Inteligente de Armazém - Sistema WMS Completo
   
   [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react)](https://reactjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
@@ -11,55 +11,55 @@
 
 ---
 
-## ðŸš€ Sobre o Projeto
+## �Ys? Sobre o Projeto
 
-**LogiWMS-Pro** Ã© um sistema completo de **Warehouse Management System (WMS)** desenvolvido para otimizar operaÃ§Ãµes logÃ­sticas em centros de distribuiÃ§Ã£o. Com foco em **usabilidade**, **seguranÃ§a** e **performance**, o sistema oferece controle total sobre:
+**LogiWMS-Pro** é um sistema completo de **Warehouse Management System (WMS)** desenvolvido para otimizar operações logísticas em centros de distribuição. Com foco em **usabilidade**, **segurança** e **performance**, o sistema oferece controle total sobre:
 
-- ðŸ“¥ **Recebimento de Mercadorias**
-- ðŸ“¦ **GestÃ£o de Estoque** com classificaÃ§Ã£o ABC
-- ðŸ”„ **MovimentaÃ§Ãµes Internas**
-- ðŸ“¤ **ExpediÃ§Ã£o e SolicitaÃ§Ãµes SA**
-- ðŸ” **InventÃ¡rio CÃ­clico**
-- ðŸ›’ **GestÃ£o de Compras** com cotaÃ§Ãµes e aprovaÃ§Ãµes
-- ðŸ“Š **RelatÃ³rios AnalÃ­ticos**
-- ðŸ‘¥ **Controle de UsuÃ¡rios e PermissÃµes**
+- �Y"� **Recebimento de Mercadorias**
+- �Y"� **Gestão de Estoque** com classificação ABC
+- �Y"" **Movimentações Internas**
+- �Y"� **Expedição e Solicitações SA**
+- �Y"� **Inventário Cíclico**
+- �Y>' **Gestão de Compras** com cotações e aprovações
+- �Y"S **Relatórios Analíticos**
+- �Y'� **Controle de Usuários e Permissões**
 
 ---
 
-## âœ¨ Principais Funcionalidades
+## �o� Principais Funcionalidades
 
-### ðŸŽ¯ Dashboard Inteligente
-- KPIs em tempo real (volume, ocupaÃ§Ã£o, alertas)
-- GrÃ¡ficos de produtividade
+### �YZ� Dashboard Inteligente
+- KPIs em tempo real (volume, ocupação, alertas)
+- Gráficos de produtividade
 - Atividades recentes do sistema
 
-### ðŸ” SeguranÃ§a OWASP
-- AutenticaÃ§Ã£o server-side
-- SanitizaÃ§Ã£o automÃ¡tica de dados
-- ProteÃ§Ã£o contra SQL Injection
+### �Y"� Segurança OWASP
+- Autenticação server-side
+- Sanitização automática de dados
+- Proteção contra SQL Injection
 - Whitelist de tabelas
 
-### ðŸ“± Interface Moderna
+### �Y"� Interface Moderna
 - Design responsivo (desktop, tablet, mobile)
 - Dark mode nativo
-- AnimaÃ§Ãµes fluidas
-- Sidebar colapsÃ¡vel
+- Animações fluidas
+- Sidebar colapsável
 
-### ðŸ”„ PersistÃªncia HÃ­brida
+### �Y"" Persistência Híbrida
 - Suporte a PostgreSQL/SQLite
-- Fallback automÃ¡tico para JSON
-- SincronizaÃ§Ã£o de dados
+- Fallback automático para JSON
+- Sincronização de dados
 
 ---
 
-## ðŸ› ï¸ Tecnologias Utilizadas
+## �Y>�️ Tecnologias Utilizadas
 
 ### Frontend
 - **React 18.3** - Biblioteca UI
-- **TypeScript 5.6** - Tipagem estÃ¡tica
-- **Vite** - Build tool ultrarrÃ¡pido
-- **Recharts** - GrÃ¡ficos e visualizaÃ§Ãµes
-- **XLSX** - ImportaÃ§Ã£o/exportaÃ§Ã£o Excel
+- **TypeScript 5.6** - Tipagem estática
+- **Vite** - Build tool ultrarrápido
+- **Recharts** - Gráficos e visualizações
+- **XLSX** - Importação/exportação Excel
 
 ### Backend
 - **Node.js 24.x** - Runtime JavaScript
@@ -67,14 +67,14 @@
 - **PostgreSQL** - Banco de dados principal
 - **SQLite** - Banco alternativo local
 
-### SeguranÃ§a
-- **OWASP Guard** - Auditoria automÃ¡tica
+### Segurança
+- **OWASP Guard** - Auditoria automática
 - **TDD Mastery** - Desenvolvimento orientado a testes
-- **Agent Manager** - OtimizaÃ§Ã£o de tarefas
+- **Agent Manager** - Otimização de tarefas
 
 ---
 
-## ðŸ“‹ PrÃ©-requisitos
+## �Y"< Pré-requisitos
 
 - **Node.js** >= 18.0.0
 - **npm** ou **yarn**
@@ -82,15 +82,15 @@
 
 ---
 
-## âš™ï¸ InstalaÃ§Ã£o
+## �sT️ Instalação
 
-### 1. Clone o repositÃ³rio
+### 1. Clone o repositório
 ```bash
 git clone https://github.com/seu-usuario/logiwms-pro.git
 cd logiwms-pro
 ```
 
-### 2. Instale as dependÃªncias
+### 2. Instale as dependências
 
 **Frontend:**
 ```bash
@@ -104,7 +104,7 @@ npm install
 cd ..
 ```
 
-### 3. Configure as variÃ¡veis de ambiente (opcional)
+### 3. Configure as variáveis de ambiente (opcional)
 
 Crie um arquivo `.env.local` na raiz do projeto:
 ```env
@@ -135,33 +135,33 @@ Abra seu navegador em: **http://localhost:3000**
 - Credenciais locais de teste (seed):
   - `admin@nortetech.com` / `admin`
   - `MATIAS@G.COM` / `matias`
-- Usuários podem ser ajustados no banco (`users`) ou no fallback JSON (`api-backend/data/users.json`).
-- Não mantenha credenciais padrão em produção.
+- Usu�rios podem ser ajustados no banco (`users`) ou no fallback JSON (`api-backend/data/users.json`).
+- N�o mantenha credenciais padr�o em produ��o.
 
-### Troubleshooting rápido
+### Troubleshooting r�pido
 
 - Erro `Failed to fetch` na tela de login:
   - Confirme backend ativo em `http://localhost:3001/health`
-  - Reinicie os dois serviços:
+  - Reinicie os dois servi�os:
     - Backend: `cd api-backend && npm run dev`
     - Frontend: `npm run dev`
 
 ---
 
-## ðŸ“ Estrutura do Projeto
+## �Y"� Estrutura do Projeto
 
 ```
 logiwms-pro/
-â”œâ”€â”€ api-backend/          # Backend Node.js + Express
-â”‚   â”œâ”€â”€ data/            # Dados JSON (fallback)
-â”‚   â”œâ”€â”€ tests/           # Testes automatizados
-â”‚   â””â”€â”€ index.js         # Servidor principal
-â”œâ”€â”€ components/          # Componentes React reutilizÃ¡veis
-â”œâ”€â”€ pages/              # PÃ¡ginas/MÃ³dulos do sistema
-â”œâ”€â”€ public/             # Assets estÃ¡ticos
-â”œâ”€â”€ types.ts            # DefiniÃ§Ãµes TypeScript
-â”œâ”€â”€ App.tsx             # Componente principal
-â””â”€â”€ schema.sql          # Schema do banco de dados
+�"o�"?�"? api-backend/          # Backend Node.js + Express
+�",   �"o�"?�"? data/            # Dados JSON (fallback)
+�",   �"o�"?�"? tests/           # Testes automatizados
+�",   �""�"?�"? index.js         # Servidor principal
+�"o�"?�"? components/          # Componentes React reutilizáveis
+�"o�"?�"? pages/              # Páginas/Módulos do sistema
+�"o�"?�"? public/             # Assets estáticos
+�"o�"?�"? types.ts            # Definições TypeScript
+�"o�"?�"? App.tsx             # Componente principal
+�""�"?�"? schema.sql          # Schema do banco de dados
 
 ```
 
@@ -173,11 +173,11 @@ logiwms-pro/
 # Frontend (typecheck)
 npm test
 
-# Backend (integração + auth + fluxo)
+# Backend (integra��o + auth + fluxo)
 cd api-backend
 npm test
 
-# Popular massa Big Data (gera backup automático em api-backend/data-backups/)
+# Popular massa Big Data (gera backup autom�tico em api-backend/data-backups/)
 npm run seed:bigdata
 
 # Stress test automatizado (login, leitura, escrita e fluxo misto)
@@ -186,21 +186,21 @@ npm run test:stress
 
 ---
 
-## ðŸš¢ Deploy
+## �Ys� Deploy
 
-### OpÃ§Ã£o 1: Vercel (Frontend) + Railway (Backend)
+### Opção 1: Vercel (Frontend) + Railway (Backend)
 1. Deploy frontend no Vercel
 2. Deploy backend no Railway
-3. Configure variÃ¡veis de ambiente
+3. Configure variáveis de ambiente
 
-### OpÃ§Ã£o 2: Docker
+### Opção 2: Docker
 ```bash
 docker-compose up -d
 ```
 
 ---
 
-## ðŸ“¸ Screenshots
+## �Y"� Screenshots
 
 <div align="center">
   <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="45%"/>
@@ -209,25 +209,25 @@ docker-compose up -d
 
 ---
 
-## ðŸ¤ Contribuindo
+## �Y�� Contribuindo
 
-ContribuiÃ§Ãµes sÃ£o bem-vindas! Para contribuir:
+Contribuições são bem-vindas! Para contribuir:
 
 1. Fork o projeto
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanÃ§as (`git commit -m 'Add some AmazingFeature'`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
 
 ---
 
-## ðŸ“ LicenÃ§a
+## �Y"� Licença
 
-Este projeto estÃ¡ sob a licenÃ§a MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-## ðŸ‘¨â€ðŸ’» Autor
+## �Y'��?��Y'� Autor
 
 **Norte Tech Solutions**
 - Website: [nortetech.com](https://nortetech.com)
@@ -235,7 +235,7 @@ Este projeto estÃ¡ sob a licenÃ§a MIT. Veja o arquivo [LICENSE](LICENSE) par
 
 ---
 
-## ðŸ™ Agradecimentos
+## �YT� Agradecimentos
 
 - [React](https://reactjs.org/)
 - [Vite](https://vitejs.dev/)
@@ -245,9 +245,10 @@ Este projeto estÃ¡ sob a licenÃ§a MIT. Veja o arquivo [LICENSE](LICENSE) par
 ---
 
 <div align="center">
-  Feito com â¤ï¸ por <strong>Norte Tech</strong>
+  Feito com ❤️ por <strong>Norte Tech</strong>
   
-  â­ Se este projeto te ajudou, considere dar uma estrela!
+  ⭐ Se este projeto te ajudou, considere dar uma estrela!
 </div>
+
 
 
