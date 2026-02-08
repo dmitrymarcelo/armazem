@@ -369,89 +369,99 @@
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000031",
     "expected_qty": 42,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "4b7f03b3-d4f7-4118-8f3b-48023d41a361",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000050",
     "expected_qty": 30,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "f0e0766f-ed73-4507-8a0e-71738898e610",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000034",
     "expected_qty": 66,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "20640cca-bdb0-4abe-90b2-6d92b6cb91c8",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000047",
     "expected_qty": 74,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "acf48dad-db9c-42ab-a924-56966a2aa9d0",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000040",
     "expected_qty": 60,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "009766ba-b8a7-47f3-b5c9-8ffd08e4df71",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000027",
     "expected_qty": 79,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 9,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "df0b808c-a8ee-47f4-b18e-5aaa67bb9dc2",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000002",
     "expected_qty": 14,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 3,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "8cbeda23-20a4-4c63-8291-6a67627d58c2",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000038",
     "expected_qty": 56,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 0,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "21aae2a8-defa-4066-a72b-0036ec4f8e25",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000017",
     "expected_qty": 44,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 11,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "id": "5e72d47c-fba4-4f65-ad20-daadc654ddc0",
     "batch_id": "INV-1770569389199",
     "sku": "SKU-000010",
     "expected_qty": 30,
-    "counted_qty": null,
-    "status": "pendente",
-    "warehouse_id": "ARMZ28"
+    "counted_qty": 9,
+    "status": "ajustado",
+    "warehouse_id": "ARMZ28",
+    "counted_at": "2026-02-08T19:07:26.373Z"
   }
 ]

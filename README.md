@@ -148,3 +148,10 @@ Campos-chave do log:
 - Frontend pode ser publicado separadamente (Vite build)
 - Backend pode rodar em EC2/RDS
 - Nginx/proxy recomendado para expor `/api`
+
+### Deploy AWS rapido (EC2 + RDS)
+Arquivos adicionados para acelerar publicacao:
+- `infra/aws/provision-ec2-rds.sh`: provisiona EC2 + RDS + SGs no default VPC (via AWS CLI)
+- `deploy-ec2.sh`: deploy no host EC2 (pull, install, migrate, build, pm2, nginx)
+- `api-backend/.env.production.rds.example`: template de ambiente para producao com RDS
+- `docs/deploy-aws-ec2-rds.md`: passo a passo completo

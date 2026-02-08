@@ -45,10 +45,12 @@
   },
   {
     "id": "INV-1770569389199",
-    "status": "aberto",
+    "status": "concluido",
     "scheduled_date": "2026-02-08T16:49:49.199Z",
     "total_items": 10,
-    "divergent_items": 0,
-    "warehouse_id": "ARMZ28"
+    "divergent_items": 10,
+    "warehouse_id": "ARMZ28",
+    "completed_at": "2026-02-08T19:07:26.373Z",
+    "accuracy_rate": 0
   }
 ]

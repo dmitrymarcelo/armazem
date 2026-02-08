@@ -35,6 +35,7 @@ interface AuditFilters {
 }
 
 const PAGE_SIZE = 40;
+const FALLBACK_FETCH_LIMIT = 2000;
 
 const MODULE_LABELS: Record<string, string> = {
   recebimento: 'Recebimento',
@@ -130,10 +131,117 @@ const toInputDate = (value: string) => {
   return '';
 };
 
+const normalizeText = (value: unknown) => String(value || '').trim().toLowerCase();
+
+const parseDateMs = (value: unknown) => {
+  const parsed = new Date(String(value || '')).getTime();
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
+const mapMovementRowsToAuditEntries = (rows: any[]): AuditLogEntry[] =>
+  rows.map((row, index) => ({
+    id: `mov-${String(row?.id || index)}`,
+    module: 'movements',
+    entity: 'movements',
+    entity_id: String(row?.id || ''),
+    action: 'create',
+    actor: String(row?.user || 'Sistema'),
+    actor_id: null,
+    warehouse_id: row?.warehouse_id || null,
+    before_data: null,
+    after_data: row,
+    meta: {
+      source: 'movements-fallback',
+      reason: row?.reason || null,
+      order_id: row?.order_id || null,
+      sku: row?.sku || null,
+    },
+    created_at: row?.timestamp || row?.created_at || null,
+  }));
+
+const applyAuditFiltersLocally = (rows: AuditLogEntry[], filters: AuditFilters): AuditLogEntry[] => {
+  const queryTerm = normalizeText(filters.q);
+  const moduleTerm = normalizeText(filters.module);
+  const entityTerm = normalizeText(filters.entity);
+  const actionTerm = normalizeText(filters.action);
+  const actorTerm = normalizeText(filters.actor);
+  const warehouseTerm = normalizeText(filters.warehouse_id);
+  const fromInput = filters.from && !filters.from.includes('T') ? `${filters.from}T00:00:00.000` : filters.from;
+  const toInput = filters.to && !filters.to.includes('T') ? `${filters.to}T23:59:59.999` : filters.to;
+  const fromMs = fromInput ? parseDateMs(fromInput) : Number.NaN;
+  const toMs = toInput ? parseDateMs(toInput) : Number.NaN;
+
+  return rows.filter((row) => {
+    const rowModule = normalizeText(row.module);
+    const rowEntity = normalizeText(row.entity);
+    const rowAction = normalizeText(row.action);
+    const rowActor = normalizeText(row.actor);
+    const rowWarehouse = String(row.warehouse_id || '').trim();
+
+    if (moduleTerm && !rowModule.includes(moduleTerm)) return false;
+    if (entityTerm && !rowEntity.includes(entityTerm)) return false;
+    if (actionTerm && !rowAction.includes(actionTerm)) return false;
+    if (actorTerm && !rowActor.includes(actorTerm)) return false;
+
+    if (warehouseTerm && warehouseTerm !== 'all') {
+      const warehouseMatches = rowWarehouse === filters.warehouse_id;
+      const isGlobal = rowWarehouse.length === 0;
+      if (!(warehouseMatches || (filters.include_global && isGlobal))) return false;
+    }
+
+    const rowDateMs = parseDateMs(row.created_at);
+    if (filters.from && Number.isNaN(rowDateMs)) return false;
+    if (filters.to && Number.isNaN(rowDateMs)) return false;
+    if (!Number.isNaN(fromMs) && rowDateMs < fromMs) return false;
+    if (!Number.isNaN(toMs) && rowDateMs > toMs) return false;
+
+    if (queryTerm) {
+      const haystack = [
+        row.id,
+        row.module,
+        row.entity,
+        row.entity_id,
+        row.action,
+        row.actor,
+        row.actor_id,
+        row.warehouse_id,
+        JSON.stringify(row.meta || {}),
+        JSON.stringify(row.before_data || {}),
+        JSON.stringify(row.after_data || {}),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      if (!haystack.includes(queryTerm)) return false;
+    }
+
+    return true;
+  });
+};
+
+const paginateRows = (rows: AuditLogEntry[], page: number, pageSize: number) => {
+  const safePage = Math.max(1, page);
+  const start = (safePage - 1) * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
+  return {
+    data: pageRows,
+    total: rows.length,
+    has_more: start + pageRows.length < rows.length,
+    next_offset: start + pageRows.length < rows.length ? start + pageRows.length : null,
+  };
+};
+
+const isSearchEndpointMissing = (response: any) => {
+  const status = Number(response?.httpStatus || 0);
+  const message = normalizeText(response?.error);
+  return status === 404 || message.includes('not found') || message.includes('cannot get /audit_logs/search');
+};
+
 export const GeneralAudit: React.FC<GeneralAuditProps> = ({ activeWarehouse }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [rows, setRows] = useState<AuditLogEntry[]>([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalRows, setTotalRows] = useState(0);
@@ -154,6 +262,7 @@ export const GeneralAudit: React.FC<GeneralAuditProps> = ({ activeWarehouse }) =
     const load = async () => {
       setIsLoading(true);
       setError('');
+      setNotice('');
 
       try {
         let query = api.from('audit_logs/search').limit(PAGE_SIZE).offset((currentPage - 1) * PAGE_SIZE);
@@ -172,14 +281,58 @@ export const GeneralAudit: React.FC<GeneralAuditProps> = ({ activeWarehouse }) =
           query = query.eq('to', Number.isNaN(endDate.getTime()) ? filters.to : endDate.toISOString());
         }
 
-        const response = await query;
+        let response = await query;
         if (cancelled) return;
+
+        if (isSearchEndpointMissing(response)) {
+          const fallbackAuditResponse = await api
+            .from('audit_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(FALLBACK_FETCH_LIMIT);
+
+          let compatibilityRows: AuditLogEntry[] = [];
+
+          if (!fallbackAuditResponse?.error && Array.isArray(fallbackAuditResponse?.data)) {
+            compatibilityRows = fallbackAuditResponse.data as AuditLogEntry[];
+          }
+
+          if (compatibilityRows.length === 0) {
+            const fallbackMovementResponse = await api
+              .from('movements')
+              .select('*')
+              .order('timestamp', { ascending: false })
+              .limit(FALLBACK_FETCH_LIMIT);
+
+            if (!fallbackMovementResponse?.error && Array.isArray(fallbackMovementResponse?.data)) {
+              compatibilityRows = mapMovementRowsToAuditEntries(fallbackMovementResponse.data as any[]);
+              setNotice('Modo compatível ativo: exibindo eventos a partir de Movimentações.');
+            }
+          } else {
+            setNotice('Modo compatível ativo: endpoint de busca avançada indisponível, usando consulta local.');
+          }
+
+          const filteredRows = applyAuditFiltersLocally(compatibilityRows, filters).sort((a, b) => {
+            const aMs = parseDateMs(a.created_at);
+            const bMs = parseDateMs(b.created_at);
+            if (Number.isNaN(aMs) && Number.isNaN(bMs)) return 0;
+            if (Number.isNaN(aMs)) return 1;
+            if (Number.isNaN(bMs)) return -1;
+            return bMs - aMs;
+          });
+          const paged = paginateRows(filteredRows, currentPage, PAGE_SIZE);
+
+          setRows(paged.data);
+          setHasNextPage(Boolean(paged.has_more));
+          setTotalRows(Number(paged.total || 0));
+          return;
+        }
 
         if (response?.error) {
           setRows([]);
           setHasNextPage(false);
           setTotalRows(0);
-          setError(String(response.error));
+          setError(`Falha ao consultar auditoria: ${String(response.error)}`);
           return;
         }
 
@@ -419,6 +572,7 @@ export const GeneralAudit: React.FC<GeneralAuditProps> = ({ activeWarehouse }) =
           </div>
         </div>
 
+        {notice && <p className="text-xs font-black text-amber-600">{notice}</p>}
         {error && <p className="text-xs font-black text-red-600">{error}</p>}
       </div>
 

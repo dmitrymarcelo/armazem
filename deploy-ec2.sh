@@ -1,77 +1,90 @@
-﻿#!/bin/bash
-# ========================================
-# SCRIPT DE DEPLOY - LogiWMS-Pro no EC2
-# ========================================
-# Execute este script no servidor EC2 (100.27.33.178)
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e  # Parar em caso de erro
+# Deploy script for EC2 host.
+# This script must run inside the EC2 instance.
 
-echo "ðŸš€ Iniciando deploy do LogiWMS-Pro..."
+PROJECT_DIR="${PROJECT_DIR:-$HOME/logiwms-pro}"
+BRANCH="${BRANCH:-main}"
+API_DIR="$PROJECT_DIR/api-backend"
+API_PORT="${API_PORT:-3001}"
+PUBLIC_DIR="${PUBLIC_DIR:-/var/www/logiwms}"
+NGINX_SITE="${NGINX_SITE:-logiwms}"
 
-# ========================================
-# 1. ATUALIZAR CÃ“DIGO
-# ========================================
-echo "ðŸ“¥ Atualizando cÃ³digo do GitHub..."
-cd ~/logiwms-pro || cd /var/www/logiwms-pro || cd /home/ubuntu/logiwms-pro
-git pull origin main
+if [[ ! -d "$PROJECT_DIR/.git" ]]; then
+  echo "Repositorio nao encontrado em $PROJECT_DIR"
+  echo "Defina PROJECT_DIR ou clone o projeto antes do deploy."
+  exit 1
+fi
 
-# ========================================
-# 2. INSTALAR DEPENDÃŠNCIAS
-# ========================================
-echo "ðŸ“¦ Instalando dependÃªncias do backend..."
-cd api-backend
-npm install
+if [[ ! -f "$API_DIR/.env" ]]; then
+  echo "Arquivo $API_DIR/.env nao encontrado."
+  echo "Copie api-backend/.env.production.rds.example para $API_DIR/.env e ajuste os valores."
+  exit 1
+fi
 
-echo "ðŸ“¦ Instalando dependÃªncias do frontend..."
-cd ..
-npm install
+echo "[1/7] Atualizando codigo"
+cd "$PROJECT_DIR"
+git fetch --all --prune
+git checkout "$BRANCH"
+git pull origin "$BRANCH"
 
-# ========================================
-# 3. EXECUTAR MIGRATION DO BANCO
-# ========================================
-echo "ðŸ—„ï¸  Executando migrations no banco de dados..."
-psql -U dmitry -d armazem -f migration.sql
+echo "[2/7] Instalando dependencias"
+npm ci
+npm --prefix api-backend ci
 
-# ========================================
-# 4. BUILD DO FRONTEND
-# ========================================
-echo "ðŸ—ï¸  Fazendo build do frontend..."
+echo "[3/7] Verificando conexao com banco"
+npm --prefix api-backend run db:health
+
+echo "[4/7] Aplicando migracao"
+npm --prefix api-backend run db:migrate
+
+echo "[5/7] Build do frontend"
 npm run build
 
-# ========================================
-# 5. COPIAR BUILD PARA NGINX
-# ========================================
-echo "ðŸ“‹ Copiando build para Nginx..."
-sudo cp -r dist/* /var/www/html/
+echo "[6/7] Publicando frontend em $PUBLIC_DIR"
+sudo mkdir -p "$PUBLIC_DIR"
+sudo rsync -a --delete "$PROJECT_DIR/dist/" "$PUBLIC_DIR/"
 
-# ========================================
-# 6. REINICIAR BACKEND (PM2)
-# ========================================
-echo "ðŸ”„ Reiniciando backend..."
-cd api-backend
-pm2 restart logiwms-api || pm2 start index.js --name logiwms-api
+echo "[7/7] Reiniciando backend e nginx"
+cd "$API_DIR"
+if pm2 describe logiwms-api >/dev/null 2>&1; then
+  pm2 restart logiwms-api --update-env
+else
+  pm2 start index.js --name logiwms-api
+fi
+pm2 save
 
-# ========================================
-# 7. REINICIAR NGINX
-# ========================================
-echo "ðŸ”„ Reiniciando Nginx..."
+sudo tee "/etc/nginx/conf.d/${NGINX_SITE}.conf" >/dev/null <<EOF
+server {
+  listen 80;
+  server_name _;
+  root $PUBLIC_DIR;
+  index index.html;
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:${API_PORT}/;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+
+  location / {
+    try_files \$uri \$uri/ /index.html;
+  }
+}
+EOF
+
+sudo nginx -t
+sudo systemctl enable nginx
 sudo systemctl restart nginx
 
-# ========================================
-# 8. VERIFICAR STATUS
-# ========================================
-echo ""
-echo "âœ… Deploy concluÃ­do!"
-echo ""
-echo "ðŸ“Š Status dos serviÃ§os:"
-pm2 status
-echo ""
-sudo systemctl status nginx --no-pager
-echo ""
-echo "ðŸŒ Acesse: http://100.27.33.178"
-echo ""
-echo "ðŸ“ Logs:"
-echo "  Backend: pm2 logs logiwms-api"
-echo "  Nginx: sudo journalctl -u nginx -f"
-
-
+echo
+echo "Deploy concluido."
+echo "- PM2: pm2 status"
+echo "- Backend logs: pm2 logs logiwms-api"
+echo "- Nginx logs: sudo journalctl -u nginx -f"

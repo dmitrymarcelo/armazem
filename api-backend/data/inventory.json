@@ -25,7 +25,7 @@
     "location": "A-03-01",
     "batch": "B-1002",
     "expiry": "2026-08-07",
-    "quantity": 14,
+    "quantity": 3,
     "status": "disponivel",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Motor",
@@ -36,7 +36,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-09-23T03:28:28.890Z"
+    "created_at": "2025-09-23T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000003",
@@ -182,7 +183,7 @@
     "location": "A-11-01",
     "batch": "B-1010",
     "expiry": "2026-08-07",
-    "quantity": 30,
+    "quantity": 9,
     "status": "divergente",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Lubrificantes",
@@ -193,7 +194,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-07-08T03:28:28.890Z"
+    "created_at": "2025-07-08T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000011",
@@ -319,7 +321,7 @@
     "location": "A-18-01",
     "batch": "B-1017",
     "expiry": "2026-08-07",
-    "quantity": 44,
+    "quantity": 11,
     "status": "excesso",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Suspensao",
@@ -330,7 +332,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-07-20T03:28:28.890Z"
+    "created_at": "2025-07-20T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000018",
@@ -415,7 +418,7 @@
     "location": "A-03-01",
     "batch": "B-1022",
     "expiry": "2026-08-07",
-    "quantity": 50,
+    "quantity": 49,
     "status": "excesso",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Suspensao",
@@ -514,7 +517,7 @@
     "location": "A-08-01",
     "batch": "B-1027",
     "expiry": "2026-08-07",
-    "quantity": 79,
+    "quantity": 9,
     "status": "vencimento",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Suspensao",
@@ -525,7 +528,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-10-23T03:28:28.890Z"
+    "created_at": "2025-10-23T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000028",
@@ -591,7 +595,7 @@
     "location": "A-12-01",
     "batch": "B-1031",
     "expiry": "2026-08-07",
-    "quantity": 42,
+    "quantity": 0,
     "status": "divergente",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Lubrificantes",
@@ -602,7 +606,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2024-04-01T03:28:28.890Z"
+    "created_at": "2024-04-01T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000032",
@@ -649,7 +654,7 @@
     "location": "A-15-01",
     "batch": "B-1034",
     "expiry": "2026-08-07",
-    "quantity": 66,
+    "quantity": 0,
     "status": "vencimento",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Eletrica",
@@ -660,7 +665,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2026-01-11T03:28:28.890Z"
+    "created_at": "2026-01-11T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000035",
@@ -708,7 +714,7 @@
     "location": "A-18-01",
     "batch": "B-1037",
     "expiry": "2026-08-07",
-    "quantity": 0,
+    "quantity": 8,
     "status": "transito",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Freios",
@@ -728,7 +734,7 @@
     "location": "A-19-01",
     "batch": "B-1038",
     "expiry": "2026-08-07",
-    "quantity": 56,
+    "quantity": 0,
     "status": "transito",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Lubrificantes",
@@ -739,7 +745,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-08-14T03:28:28.890Z"
+    "created_at": "2025-08-14T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000039",
@@ -747,7 +754,7 @@
     "location": "A-20-01",
     "batch": "B-1039",
     "expiry": "2026-08-07",
-    "quantity": 58,
+    "quantity": 48,
     "status": "vencimento",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Eletrica",
@@ -766,7 +773,7 @@
     "location": "A-01-01",
     "batch": "B-1040",
     "expiry": "2026-08-07",
-    "quantity": 60,
+    "quantity": 0,
     "status": "disponivel",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Eletrica",
@@ -777,7 +784,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-10-28T03:28:28.890Z"
+    "created_at": "2025-10-28T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000041",
@@ -882,7 +890,7 @@
     "location": "A-07-01",
     "batch": "B-1046",
     "expiry": "2026-08-07",
-    "quantity": 0,
+    "quantity": 19,
     "status": "excesso",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Suspensao",
@@ -902,7 +910,7 @@
     "location": "A-08-01",
     "batch": "B-1047",
     "expiry": "2026-08-07",
-    "quantity": 74,
+    "quantity": 0,
     "status": "excesso",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Eletrica",
@@ -913,7 +921,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-11-04T03:28:28.890Z"
+    "created_at": "2025-11-04T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-000048",
@@ -921,7 +930,7 @@
     "location": "A-09-01",
     "batch": "B-1048",
     "expiry": "2026-08-07",
-    "quantity": 6,
+    "quantity": 8,
     "status": "disponivel",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Freios",
@@ -960,7 +969,7 @@
     "location": "A-11-01",
     "batch": "B-1050",
     "expiry": "2026-08-07",
-    "quantity": 30,
+    "quantity": 0,
     "status": "disponivel",
     "image_url": "https://images.unsplash.com/photo-1553413077-190dd305871c?w=400&q=80",
     "category": "Lubrificantes",
@@ -971,7 +980,8 @@
     "lead_time": 7,
     "safety_stock": 5,
     "warehouse_id": "ARMZ28",
-    "created_at": "2025-07-02T03:28:28.890Z"
+    "created_at": "2025-07-02T03:28:28.890Z",
+    "last_counted_at": "2026-02-08T19:07:26.373Z"
   },
   {
     "sku": "SKU-REC-1770523099557",

@@ -3,7 +3,7 @@
     "id": "PO-TEST-00001",
     "vendor": "Fornecedor 20",
     "request_date": "2025-09-07T03:29:08.180Z",
-    "status": "enviado",
+    "status": "recebido",
     "priority": "normal",
     "total": 102,
     "requester": "Comprador Teste",
@@ -18,12 +18,21 @@
     "quotes": [],
     "selected_quote_id": null,
     "sent_to_vendor_at": null,
-    "received_at": null,
+    "received_at": "2026-02-08T19:26:43.200Z",
     "quotes_added_at": null,
     "approved_at": null,
     "rejected_at": null,
     "vendor_order_number": "VN-100001",
-    "approval_history": [],
+    "approval_history": [
+      {
+        "id": "1e9ef5f7-aa19-48b6-9c79-f4984f5aa5e0",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:26:43.850Z",
+        "status": "recebido",
+        "description": "Entrega realizada normalmente"
+      }
+    ],
     "cost_center": "OPS-CD",
     "warehouse_id": "ARMZ28",
     "created_at": "2025-11-09T03:29:08.180Z"
@@ -177,7 +186,7 @@
     "id": "PO-TEST-00007",
     "vendor": "Fornecedor 35",
     "request_date": "2025-11-03T03:29:08.180Z",
-    "status": "pendente",
+    "status": "recebido",
     "priority": "urgente",
     "total": 456,
     "requester": "Comprador Teste",
@@ -191,13 +200,46 @@
     ],
     "quotes": [],
     "selected_quote_id": null,
-    "sent_to_vendor_at": null,
-    "received_at": null,
+    "sent_to_vendor_at": "2026-02-08T19:26:30.046Z",
+    "received_at": "2026-02-08T19:26:37.369Z",
     "quotes_added_at": null,
-    "approved_at": null,
+    "approved_at": "2026-02-08T19:26:26.094Z",
     "rejected_at": null,
-    "vendor_order_number": "VN-100007",
-    "approval_history": [],
+    "vendor_order_number": "sr",
+    "approval_history": [
+      {
+        "id": "9b3ccc24-f330-4fe7-9c44-dc9e14ecdd69",
+        "action": "approved",
+        "by": "Administrador",
+        "at": "2026-02-08T19:26:26.094Z",
+        "status": "aprovado",
+        "description": "Aprovado por gestor"
+      },
+      {
+        "id": "780899e6-d752-4531-bbd5-81d5c38ff8d0",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:26:26.094Z",
+        "status": "aprovado",
+        "description": "Aprovação financeira e operacional concluída"
+      },
+      {
+        "id": "8ff4daa0-07cd-476d-a2a3-82b5a0458ada",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:26:30.046Z",
+        "status": "enviado",
+        "description": "Pedido enviado ao fornecedor (Nº sr)"
+      },
+      {
+        "id": "a8af5bc5-a108-47e7-b76e-29de647913f6",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:26:38.066Z",
+        "status": "recebido",
+        "description": "Entrega realizada normalmente"
+      }
+    ],
     "cost_center": "OPS-CD",
     "warehouse_id": "ARMZ28",
     "created_at": "2025-09-04T03:29:08.180Z"
@@ -520,11 +562,11 @@
   },
   {
     "id": "PO-TEST-00018",
-    "vendor": "Fornecedor 47",
+    "vendor": "Fornecedor 1",
     "request_date": "2025-12-21T03:29:08.180Z",
-    "status": "requisicao",
+    "status": "recebido",
     "priority": "normal",
-    "total": 1292,
+    "total": 1,
     "requester": "Comprador Teste",
     "items": [
       {
@@ -534,15 +576,83 @@
         "price": 68
       }
     ],
-    "quotes": [],
-    "selected_quote_id": null,
-    "sent_to_vendor_at": null,
-    "received_at": null,
-    "quotes_added_at": null,
-    "approved_at": null,
+    "quotes": [
+      {
+        "id": "Q1-1770577570254",
+        "vendorId": "V-00001",
+        "vendorName": "Fornecedor 1",
+        "items": [
+          {
+            "sku": "SKU-000046",
+            "unitPrice": 0.05263157894736842,
+            "leadTime": "7 dias"
+          }
+        ],
+        "totalValue": 1,
+        "validUntil": "10/03/2026",
+        "notes": "wreeee",
+        "quotedBy": "Comprador",
+        "quotedAt": "08/02/2026, 16:06:10",
+        "isSelected": true
+      }
+    ],
+    "selected_quote_id": "Q1-1770577570254",
+    "sent_to_vendor_at": "2026-02-08T19:06:27.301Z",
+    "received_at": "2026-02-08T19:06:42.858Z",
+    "quotes_added_at": "2026-02-08T19:06:10.255Z",
+    "approved_at": "2026-02-08T19:06:20.605Z",
     "rejected_at": null,
-    "vendor_order_number": "VN-100018",
-    "approval_history": [],
+    "vendor_order_number": "wew",
+    "approval_history": [
+      {
+        "id": "3ba1c09f-73d7-44fb-af2c-a543f2fb5404",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:10.255Z",
+        "status": "cotacao",
+        "description": "Cotação de fornecedores vinculada"
+      },
+      {
+        "id": "74d7d2cf-fdcb-4b4b-bca5-5bb630c91b2b",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:12.053Z",
+        "status": "pendente",
+        "description": "Pedido enviado para aprovação do gestor"
+      },
+      {
+        "id": "15dd058a-a36e-497d-ae94-897fff88cdb8",
+        "action": "approved",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:20.605Z",
+        "status": "aprovado",
+        "description": "Aprovado por gestor"
+      },
+      {
+        "id": "385baa22-5c4f-4a12-bf05-a31053bf8884",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:20.605Z",
+        "status": "aprovado",
+        "description": "Aprovação financeira e operacional concluída"
+      },
+      {
+        "id": "8ae8098e-a7c9-459d-9833-2b2be4e9c161",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:27.301Z",
+        "status": "enviado",
+        "description": "Pedido enviado ao fornecedor (Nº wew)"
+      },
+      {
+        "id": "fb4a29a5-6fcf-4d23-9cb8-6652641b1010",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:06:43.490Z",
+        "status": "recebido",
+        "description": "Entrega realizada normalmente"
+      }
+    ],
     "cost_center": "OPS-CD",
     "warehouse_id": "ARMZ28",
     "created_at": "2025-08-26T03:29:08.180Z"
@@ -798,7 +908,7 @@
     "id": "PO-TEST-00027",
     "vendor": "Fornecedor 30",
     "request_date": "2025-09-10T03:29:08.180Z",
-    "status": "enviado",
+    "status": "recebido",
     "priority": "normal",
     "total": 616,
     "requester": "Comprador Teste",
@@ -813,12 +923,21 @@
     "quotes": [],
     "selected_quote_id": null,
     "sent_to_vendor_at": null,
-    "received_at": null,
+    "received_at": "2026-02-08T19:04:15.478Z",
     "quotes_added_at": null,
     "approved_at": null,
     "rejected_at": null,
     "vendor_order_number": "VN-100027",
-    "approval_history": [],
+    "approval_history": [
+      {
+        "id": "751f2094-f0ec-4095-b4cf-712674ecb5c6",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-08T19:04:16.117Z",
+        "status": "recebido",
+        "description": "Entrega realizada normalmente"
+      }
+    ],
     "cost_center": "OPS-CD",
     "warehouse_id": "ARMZ28",
     "created_at": "2025-11-02T03:29:08.180Z"

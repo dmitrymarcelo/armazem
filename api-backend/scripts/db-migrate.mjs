@@ -5,6 +5,8 @@ import pg from 'pg';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
+const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+const dbSslRejectUnauthorized = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +37,7 @@ const client = new pg.Client({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT || 5432),
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  ssl: dbSslEnabled ? { rejectUnauthorized: dbSslRejectUnauthorized } : undefined,
   connectionTimeoutMillis: 10000,
 });
 

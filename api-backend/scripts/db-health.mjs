@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import pg from 'pg';
 
 dotenv.config();
+const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+const dbSslRejectUnauthorized = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true';
 
 const client = new pg.Client({
   host: process.env.DB_HOST,
@@ -9,7 +11,7 @@ const client = new pg.Client({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT || 5432),
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  ssl: dbSslEnabled ? { rejectUnauthorized: dbSslRejectUnauthorized } : undefined,
   connectionTimeoutMillis: 5000,
 });
 

@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dataDir = path.resolve(__dirname, '..', 'data');
 const backupDir = path.resolve(__dirname, '..', 'data-backups');
+const enableBackup = process.argv.includes('--backup');
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -103,7 +104,7 @@ function normalizeAdminUser(baseUser) {
 }
 
 ensureDir(dataDir);
-const backupPath = backupCurrentData();
+const backupPath = enableBackup ? backupCurrentData() : null;
 
 const users = readJson('users.json', []);
 const existingAdmin =
@@ -126,7 +127,7 @@ writeJson('notifications.json', []);
 
 const summary = {
   cleanedAt: new Date().toISOString(),
-  backupPath,
+  backupPath: backupPath || 'disabled',
   counts: {
     warehouses: normalizedWarehouses.length,
     users: 1,

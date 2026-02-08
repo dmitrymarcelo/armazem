@@ -39,6 +39,11 @@ dist-ssr
 api-backend/node_modules/
 api-backend/dist/
 api-backend/.env
+api-backend/data-backups/
+api-backend/reports/
+api-backend/data/movements.json
+api-backend/data/audit_logs.json
+api-backend/data/notifications.json
 
 # Development artifacts
 .gemini/
@@ -54,6 +59,14 @@ test-*.js
 metadata.json
 playwright-report/
 test-results/
+
+# AWS local deployment artifacts (never commit)
+infra/aws/keys/
+infra/aws/.last-deploy-vars.json
+infra/aws/.last-ssm-command-id.txt
+infra/aws/ssm-params.json
+infra/aws/ssm-oneoff.json
+infra/aws/deploy-output.json
 
 # OS files
 Thumbs.db

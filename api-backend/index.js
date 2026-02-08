@@ -102,12 +102,15 @@ ensureDataDirExists();
 let dbConnected = false;
 let dbLastError = null;
 let dbLastCheckedAt = null;
+const dbSslEnabled = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+const dbSslRejectUnauthorized = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || 'false').toLowerCase() === 'true';
 const pool = new pg.Pool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT || 5432),
+  ssl: dbSslEnabled ? { rejectUnauthorized: dbSslRejectUnauthorized } : undefined,
   connectionTimeoutMillis: 2000,
 });
 
