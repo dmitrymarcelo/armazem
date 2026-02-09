@@ -33,23 +33,23 @@ if (-not (Test-Path $envPath)) {
   Write-Host "$envPath já existe. Mantendo arquivo atual."
 }
 
-$envContent = Get-Content $envPath -Raw
-if ($envContent -match '^CORS_ORIGIN=') {
-  $lines = $envContent -split "`r?`n"
-  $updated = @()
-  foreach ($line in $lines) {
-    if ($line -like "CORS_ORIGIN=*") {
-      $origins = $line.Substring("CORS_ORIGIN=".Length).Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-      if ($origins -notcontains "http://localhost:3000") { $origins += "http://localhost:3000" }
-      if ($origins -notcontains $Ec2FrontendUrl) { $origins += $Ec2FrontendUrl }
-      $line = "CORS_ORIGIN=" + (($origins | Select-Object -Unique) -join ",")
-    }
-    $updated += $line
+$lines = Get-Content $envPath
+$origins = @()
+$filteredLines = @()
+foreach ($line in $lines) {
+  if ($line -like "CORS_ORIGIN=*") {
+    $value = $line.Substring("CORS_ORIGIN=".Length)
+    $origins += $value.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+    continue
   }
-  Set-Content -Path $envPath -Value ($updated -join "`n") -Encoding UTF8
-} else {
-  Add-Content -Path $envPath -Value "`nCORS_ORIGIN=http://localhost:3000,$Ec2FrontendUrl"
+  $filteredLines += $line
 }
+
+if ($origins -notcontains "http://localhost:3000") { $origins += "http://localhost:3000" }
+if ($origins -notcontains $Ec2FrontendUrl) { $origins += $Ec2FrontendUrl }
+
+$filteredLines += ("CORS_ORIGIN=" + (($origins | Select-Object -Unique) -join ","))
+Set-Content -Path $envPath -Value ($filteredLines -join "`n") -Encoding UTF8
 
 Push-Location $root
 try {
