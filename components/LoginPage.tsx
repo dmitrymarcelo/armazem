@@ -1,22 +1,16 @@
 ﻿import React, { useState } from 'react';
 import { User } from '../types';
 import { api } from '../api-client';
+import {
+  normalizeAllowedWarehouses,
+  normalizeUserModules,
+  normalizeUserRole,
+  normalizeWorkshopAccess,
+} from '../utils/userAccess';
 
 interface LoginPageProps {
   onLogin: (user: User, token?: string) => void;
 }
-
-const parseJsonArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value as string[];
-  if (typeof value !== 'string' || !value.trim()) return [];
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [loginInput, setLoginInput] = useState('');
@@ -73,13 +67,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       const token = response.token as string | undefined;
 
       if (finalUser) {
+        const normalizedRole = normalizeUserRole(finalUser.role);
+        const normalizedModules = normalizeUserModules(finalUser.modules, normalizedRole);
+        const normalizedWarehouses = normalizeAllowedWarehouses(
+          finalUser.allowed_warehouses ?? finalUser.allowedWarehouses,
+          ['ARMZ28']
+        );
+
         onLogin(
           {
             ...finalUser,
+            role: normalizedRole,
+            status: String(finalUser.status || '').toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo',
             lastAccess: finalUser.last_access,
             warehouseId: finalUser.warehouse_id || 'ARMZ28',
-            modules: parseJsonArray(finalUser.modules),
-            allowedWarehouses: parseJsonArray(finalUser.allowed_warehouses),
+            modules: normalizedModules,
+            allowedWarehouses: normalizedWarehouses,
+            hasWorkshopAccess: normalizeWorkshopAccess(
+              finalUser.modules,
+              finalUser.has_workshop_access ?? finalUser.hasWorkshopAccess,
+              normalizedRole
+            ),
           },
           token
         );
@@ -170,6 +178,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </svg>
               </span>
             </button>
+
           </form>
         </div>
       </div>

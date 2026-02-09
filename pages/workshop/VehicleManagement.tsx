@@ -10,6 +10,7 @@ interface VehicleManagementProps {
   onDeleteVehicle: (id: string) => void;
   onSyncFleetAPI?: (token: string) => void;
   onRequestParts: (vehiclePlate: string, items: { sku: string; name: string; qty: number }[]) => void;
+  onImportVehicles?: (vehicles: Omit<Vehicle, 'id'>[]) => void;
 }
 
 export const VehicleManagement: React.FC<VehicleManagementProps> = ({
@@ -20,7 +21,8 @@ export const VehicleManagement: React.FC<VehicleManagementProps> = ({
   onUpdateVehicle,
   onDeleteVehicle,
   onSyncFleetAPI,
-  onRequestParts
+  onRequestParts,
+  onImportVehicles
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -42,6 +44,12 @@ export const VehicleManagement: React.FC<VehicleManagementProps> = ({
   const [requestItems, setRequestItems] = useState<{ sku: string; name: string; qty: number }[]>([]);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
   const [requestQty, setRequestQty] = useState(1);
+
+  // Bulk import states
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importData, setImportData] = useState<string>('');
+  const [importPreview, setImportPreview] = useState<Vehicle[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   const filteredVehicles = vehicles.filter(v => 
     v.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,6 +125,97 @@ export const VehicleManagement: React.FC<VehicleManagementProps> = ({
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const template = `PLACA,MODELO,TIPO,STATUS,CENTRO_CUSTO,ULTIMA_MANUTENCAO
+BGM-1001,Volvo FH 540,Caminhão,Disponível,OPS-CD,15/01/2026
+CHN-1002,Mercedes Actros,Carreta,Disponível,MAN-OFI,20/01/2026
+DIO-1003,Volvo FH 460,Utilitário,Em Viagem,OPS-CD,10/01/2026
+ELQ-1004,Scania R450,Caminhão,Manutenção,OPS-CD,25/01/2026`;
+    
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'template_veiculos.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const parseImportData = (data: string) => {
+    const lines = data.trim().split('\n');
+    const errors: string[] = [];
+    const parsed: Vehicle[] = [];
+
+    // Skip header if first line contains PLACA or MODELO
+    const startIndex = lines[0].toUpperCase().includes('PLACA') || lines[0].toUpperCase().includes('MODELO') ? 1 : 0;
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length < 5) {
+        errors.push(`Linha ${i + 1}: dados incompletos`);
+        continue;
+      }
+
+      const [plate, model, type, status, costCenter, lastMaintenance] = parts;
+
+      if (!plate || !model) {
+        errors.push(`Linha ${i + 1}: placa e modelo são obrigatórios`);
+        continue;
+      }
+
+      // Validate plate format (simple validation)
+      const plateRegex = /^[A-Z]{3}-\d{4}$/i;
+      if (!plateRegex.test(plate) && !/^\d{4}[A-Z]{3}$/i.test(plate)) {
+        errors.push(`Linha ${i + 1}: formato de placa inválido "${plate}"`);
+        continue;
+      }
+
+      parsed.push({
+        plate: plate.toUpperCase(),
+        model,
+        type: type || 'Caminhão',
+        status: status || 'Disponível',
+        costCenter: costCenter || 'OPS-CD',
+        lastMaintenance: lastMaintenance || new Date().toLocaleDateString('pt-BR')
+      });
+    }
+
+    setImportPreview(parsed);
+    setImportErrors(errors);
+    return parsed;
+  };
+
+  const handleProcessImport = () => {
+    if (importPreview.length === 0) return;
+
+    if (onImportVehicles) {
+      onImportVehicles(importPreview);
+    } else {
+      // Fallback: add vehicles one by one
+      importPreview.forEach(vehicle => onAddVehicle(vehicle));
+    }
+
+    setIsImportModalOpen(false);
+    setImportData('');
+    setImportPreview([]);
+    setImportErrors([]);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setImportData(content);
+      parseImportData(content);
+    };
+    reader.readAsText(file);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
@@ -137,6 +236,15 @@ export const VehicleManagement: React.FC<VehicleManagementProps> = ({
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Importar
+          </button>
           {onSyncFleetAPI && (
             <button
               onClick={handleSync}
@@ -483,6 +591,158 @@ export const VehicleManagement: React.FC<VehicleManagementProps> = ({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                   Enviar Solicitação SA
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Importar Veículos em Massa
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Faça upload de um arquivo CSV ou cole os dados diretamente
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Template Download */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Baixe o template de importação
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      Formato: PLACA, MODELO, TIPO, STATUS, CENTRO_CUSTO, ULTIMA_MANUTENCAO
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Template CSV
+                  </button>
+                </div>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Arquivo CSV
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileUpload}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+
+              {/* Manual Input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Ou cole os dados diretamente (CSV)
+                </label>
+                <textarea
+                  value={importData}
+                  onChange={(e) => {
+                    setImportData(e.target.value);
+                    parseImportData(e.target.value);
+                  }}
+                  placeholder="PLACA,MODELO,TIPO,STATUS,CENTRO_CUSTO,ULTIMA_MANUTENCAO&#10;BGM-1001,Volvo FH 540,Caminhão,Disponível,OPS-CD,15/01/2026"
+                  rows={6}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Preview */}
+              {importPreview.length > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                    Pré-visualização ({importPreview.length} veículos):
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Placa</th>
+                          <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Modelo</th>
+                          <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Tipo</th>
+                          <th className="px-3 py-2 text-left text-slate-700 dark:text-slate-300">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {importPreview.slice(0, 10).map((vehicle, index) => (
+                          <tr key={index}>
+                            <td className="px-3 py-2 text-slate-900 dark:text-white font-mono">{vehicle.plate}</td>
+                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{vehicle.model}</td>
+                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{vehicle.type}</td>
+                            <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{vehicle.status}</td>
+                          </tr>
+                        ))}
+                        {importPreview.length > 10 && (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-2 text-center text-slate-500 dark:text-slate-400 italic">
+                              ... e mais {importPreview.length - 10} veículos
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {importErrors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-100 dark:border-red-800">
+                  <h4 className="text-sm font-medium text-red-900 dark:text-red-100 mb-2">
+                    Erros encontrados ({importErrors.length}):
+                  </h4>
+                  <ul className="text-sm text-red-700 dark:text-red-300 space-y-1 max-h-32 overflow-y-auto">
+                    {importErrors.map((error, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-red-500">•</span>
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setImportData('');
+                    setImportPreview([]);
+                    setImportErrors([]);
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProcessImport}
+                  disabled={importPreview.length === 0}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Importar {importPreview.length > 0 && `(${importPreview.length})`}
                 </button>
               </div>
             </div>

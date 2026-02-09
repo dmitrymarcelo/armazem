@@ -5,7 +5,7 @@ import { PaginationBar } from '../components/PaginationBar';
 
 type RequestStatus = 'aprovacao' | 'separacao' | 'entregue';
 
-// Consolidated Interface
+// Update the MaterialRequest interface to support multiple items
 export interface MaterialRequest {
   id: string;
   sku: string;
@@ -18,6 +18,7 @@ export interface MaterialRequest {
   timestamp: string;
   costCenter?: string;
   warehouseId?: string;
+  items?: { sku: string; name: string; qty: number }[]; // Support for multiple items
 }
 
 interface OrderItem {
@@ -42,6 +43,8 @@ interface ExpeditionProps {
   requests: MaterialRequest[];
   onRequestCreate: (data: MaterialRequest) => Promise<void>;
   onRequestUpdate: (id: string, status: RequestStatus) => Promise<void>;
+  onRequestEdit?: (id: string, data: Partial<MaterialRequest>) => Promise<void>;
+  onRequestDelete?: (id: string) => Promise<void>;
   activeWarehouse: string;
   currentPage: number;
   pageSize: number;
@@ -59,6 +62,8 @@ export const Expedition: React.FC<ExpeditionProps> = ({
   requests,
   onRequestCreate,
   onRequestUpdate,
+  onRequestEdit,
+  onRequestDelete,
   activeWarehouse,
   currentPage,
   pageSize,
@@ -68,6 +73,20 @@ export const Expedition: React.FC<ExpeditionProps> = ({
 }) => {
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  
+  // Edit and Delete states
+  const [editingRequest, setEditingRequest] = useState<MaterialRequest | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  
+  // Edit form states
+  const [editItems, setEditItems] = useState<{ sku: string; name: string; qty: number }[]>([]);
+  const [editPlate, setEditPlate] = useState('');
+  const [editDept, setEditDept] = useState('');
+  const [editCostCenter, setEditCostCenter] = useState('');
+  const [editPriority, setEditPriority] = useState<'normal' | 'alta' | 'urgente'>('normal');
+  const [editStatus, setEditStatus] = useState<RequestStatus>('aprovacao');
+  const [isEditPlateSearchOpen, setIsEditPlateSearchOpen] = useState(false);
+  const editPlateSearchRef = useRef<HTMLDivElement>(null);
 
   // Form States
   const [reqSku, setReqSku] = useState('');
@@ -84,6 +103,9 @@ export const Expedition: React.FC<ExpeditionProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (plateSearchRef.current && !plateSearchRef.current.contains(event.target as Node)) {
         setIsPlateSearchOpen(false);
+      }
+      if (editPlateSearchRef.current && !editPlateSearchRef.current.contains(event.target as Node)) {
+        setIsEditPlateSearchOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -163,23 +185,194 @@ export const Expedition: React.FC<ExpeditionProps> = ({
   };
 
   const advanceWorkflow = async (requestId: string) => {
-    const request = requests.find(r => r.id === requestId);
-    if (!request) return;
-
-    if (request.status === 'aprovacao') {
-      await onRequestUpdate(requestId, 'separacao');
-    } else if (request.status === 'separacao') {
-      // O momento da entrega é o gatilho para a baixa no estoque
-      const success = await onProcessPicking(
-        request.sku,
-        request.qty,
-        `Saída por Solicitação SA ${request.id}`,
-        request.id
-      );
-      if (success) {
-        await onRequestUpdate(requestId, 'entregue');
+    try {
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        console.error('Request not found:', requestId);
+        alert('Erro: Solicitação não encontrada');
+        return;
       }
+
+      console.log('=== Advance Workflow ===');
+      console.log('Request ID:', requestId);
+      console.log('Current Status:', request.status);
+      console.log('Request items:', request.items);
+      console.log('Request SKU:', request.sku, 'QTY:', request.qty);
+
+      if (request.status === 'aprovacao') {
+        console.log('Updating to separacao...');
+        await onRequestUpdate(requestId, 'separacao');
+        console.log('Updated to separacao successfully!');
+      } else if (request.status === 'separacao') {
+        // Processar todos os itens da solicitação
+        const itemsToProcess = request.items && request.items.length > 0 
+          ? request.items 
+          : [{ sku: request.sku, name: request.name, qty: request.qty }];
+        
+        console.log('Items to process:', itemsToProcess);
+        
+        let allSuccess = true;
+        
+        for (const item of itemsToProcess) {
+          if (!item.sku || item.qty <= 0) {
+            console.log('Skipping invalid item:', item);
+            continue;
+          }
+          
+          console.log('Processing item:', item.sku, 'QTY:', item.qty);
+          
+          try {
+            const success = await onProcessPicking(
+              item.sku,
+              item.qty,
+              `Saída por Solicitação SA ${request.id}`,
+              request.id
+            );
+            
+            console.log('Process result for', item.sku, ':', success);
+            
+            if (!success) {
+              allSuccess = false;
+              console.error(`Falha ao processar item ${item.sku}`);
+            }
+          } catch (pickingError) {
+            console.error('Error processing picking for', item.sku, ':', pickingError);
+            allSuccess = false;
+          }
+        }
+        
+        console.log('All success:', allSuccess);
+        
+        if (allSuccess) {
+          console.log('Updating status to entregue...');
+          try {
+            await onRequestUpdate(requestId, 'entregue');
+            console.log('Status updated to entregue successfully!');
+          } catch (updateError) {
+            console.error('Error updating status:', updateError);
+            alert('Erro ao atualizar status: ' + (updateError?.message || 'Erro desconhecido'));
+          }
+        } else {
+          alert('Erro ao processar alguns itens. Verifique o estoque disponível.');
+        }
+      }
+    } catch (error) {
+      console.error('=== Advance Workflow Error ===');
+      console.error('Error:', error);
+      console.error('Stack:', error?.stack);
+      alert('Erro no workflow: ' + (error?.message || 'Erro desconhecido'));
     }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!deleteConfirmId) return;
+    
+    if (!onRequestDelete) {
+      alert('Função de exclusão não está disponível. Verifique se o componente pai forneceu a prop onRequestDelete.');
+      setDeleteConfirmId(null);
+      return;
+    }
+    
+    try {
+      await onRequestDelete(deleteConfirmId);
+      setDeleteConfirmId(null);
+      alert('Solicitação removida com sucesso!');
+    } catch (error) {
+      alert('Erro ao remover solicitação. Tente novamente.');
+      console.error('Error deleting request:', error);
+    }
+  };
+
+  // Open edit modal and initialize form states
+  const openEditModal = (req: MaterialRequest) => {
+    setEditingRequest(req);
+    // Initialize items array - if req has items use them, otherwise create single item from legacy fields
+    if (req.items && req.items.length > 0) {
+      setEditItems([...req.items]);
+    } else {
+      setEditItems([{ sku: req.sku, name: req.name, qty: req.qty }]);
+    }
+    setEditPlate(req.plate);
+    setEditDept(req.dept);
+    setEditCostCenter(req.costCenter || '');
+    setEditPriority(req.priority);
+    setEditStatus(req.status);
+  };
+
+  // Save edited request
+  const handleSaveEdit = async () => {
+    if (!editingRequest) return;
+    
+    // Validate basic item data (sku and qty)
+    const hasInvalidItems = editItems.some(item => !item.sku || item.qty <= 0);
+    if (hasInvalidItems) {
+      alert('Existem itens com dados inválidos. Selecione um produto e informe a quantidade.');
+      return;
+    }
+    
+    // Calculate total quantity from all items
+    const totalQty = editItems.reduce((sum, item) => sum + item.qty, 0);
+    
+    // Update the request with edited data
+    const updatedRequest: MaterialRequest = {
+      ...editingRequest,
+      items: editItems,
+      sku: editItems[0]?.sku || '',
+      name: editItems[0]?.name || '',
+      qty: totalQty,
+      plate: editPlate,
+      dept: editDept,
+      costCenter: editCostCenter,
+      priority: editPriority,
+      status: editStatus,
+    };
+
+    try {
+      // Call onRequestEdit if provided to save the full request data
+      console.log('Tentando salvar...', editingRequest.id, updatedRequest);
+      console.log('onRequestEdit existe?', !!onRequestEdit);
+      if (onRequestEdit) {
+        await onRequestEdit(editingRequest.id, updatedRequest);
+        console.log('Salvo com sucesso!');
+      } else {
+        console.warn('onRequestEdit não foi fornecido!');
+        alert('Erro: Função de edição não disponível. Verifique se o componente pai forneceu a prop onRequestEdit.');
+        return;
+      }
+      
+      // Close the modal after successful save
+      setEditingRequest(null);
+      alert('Solicitação atualizada com sucesso!');
+    } catch (error: any) {
+      alert('Erro ao salvar alterações. Tente novamente. Detalhes: ' + (error?.message || 'Erro desconhecido'));
+      console.error('Error saving request:', error);
+    }
+  };
+
+  // Add new item to edit form
+  const handleAddEditItem = () => {
+    setEditItems([...editItems, { sku: '', name: '', qty: 1 }]);
+  };
+
+  // Remove item from edit form
+  const handleRemoveEditItem = (index: number) => {
+    setEditItems(editItems.filter((_, i) => i !== index));
+  };
+
+  // Update item in edit form
+  const handleUpdateEditItem = (index: number, field: string, value: string | number) => {
+    const newItems = [...editItems];
+    if (field === 'sku') {
+      const selectedItem = inventory.find(i => i.sku === value);
+      newItems[index] = { 
+        ...newItems[index], 
+        sku: value, 
+        name: selectedItem?.name || '' 
+      };
+    } else if (field === 'qty') {
+      newItems[index] = { ...newItems[index], qty: Number(value) };
+    }
+    setEditItems(newItems);
   };
 
   return (
@@ -240,8 +433,29 @@ export const Expedition: React.FC<ExpeditionProps> = ({
                     </div>
                     <p className="text-[10px] font-black text-primary uppercase tracking-wider">{req.dept} - PLACA: {req.plate}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase leading-none">{req.timestamp}</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(req)}
+                      disabled={req.status !== 'aprovacao'}
+                      className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={req.status !== 'aprovacao' ? 'Só é possível editar antes da aprovação' : 'Editar'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(req.id)}
+                      disabled={req.status === 'entregue'}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={req.status === 'entregue' ? 'Não é possível remover solicitações entregues' : 'Remover'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -575,6 +789,248 @@ export const Expedition: React.FC<ExpeditionProps> = ({
             </form>
           </div>
         </div >
+      )}
+
+      {/* Edit Modal */}
+      {editingRequest && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-black tracking-tight text-slate-800 dark:text-white">Editar Solicitação</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{editingRequest.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingRequest(null)} className="size-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-800 dark:text-white hover:text-red-500 transition-all font-black text-xl">
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+                <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens da Solicitação</label>
+                  <button
+                    onClick={handleAddEditItem}
+                    disabled={!editItems.every(item => item.sku && item.qty > 0)}
+                    className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Adicionar Item
+                  </button>
+                </div>
+                
+                {editItems.map((item, index) => {
+                  const stock = getStockForSku(item.sku);
+                  const isInsufficient = item.sku && item.qty > stock;
+                  return (
+                  <div key={index} className={`flex gap-2 items-start p-3 rounded-xl border ${isInsufficient ? 'bg-red-50 border-red-300' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
+                    <div className="flex-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Produto (SKU)</label>
+                      <select
+                        value={item.sku}
+                        onChange={(e) => handleUpdateEditItem(index, 'sku', e.target.value)}
+                        className={`w-full px-3 py-2 bg-white dark:bg-slate-700 border rounded-lg font-bold text-sm ${isInsufficient ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
+                      >
+                        <option value="">Selecione...</option>
+                        {inventory.map(invItem => (
+                          <option key={invItem.sku} value={invItem.sku}>{invItem.sku} - {invItem.name} (Estoque: {invItem.quantity})</option>
+                        ))}
+                      </select>
+                      {isInsufficient && (
+                        <p className="text-[9px] text-red-500 font-bold mt-1">Estoque insuficiente! Disponível: {stock} un</p>
+                      )}
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Qtd</label>
+                      <input
+                        type="number"
+                        value={item.qty}
+                        onChange={(e) => handleUpdateEditItem(index, 'qty', e.target.value)}
+                        className={`w-full px-3 py-2 bg-white dark:bg-slate-700 border rounded-lg font-bold text-sm text-center ${isInsufficient ? 'border-red-300 text-red-600' : 'border-slate-200 dark:border-slate-600'}`}
+                        min="1"
+                      />
+                    </div>
+                    {editItems.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveEditItem(index)}
+                        className="mt-6 p-2 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Remover item"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )})}
+              </div>
+
+              {/* Plate and Cost Center */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 relative" ref={editPlateSearchRef}>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Placa do Veículo</label>
+                  <input
+                    value={editPlate}
+                    onChange={(e) => {
+                      setEditPlate(e.target.value);
+                      setIsEditPlateSearchOpen(true);
+                    }}
+                    onFocus={() => setIsEditPlateSearchOpen(true)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl font-black text-sm uppercase"
+                  />
+                  {isEditPlateSearchOpen && vehicles.filter(v => v.plate.toLowerCase().includes(editPlate.toLowerCase())).length > 0 && (
+                    <div className="absolute z-[110] left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden">
+                      <div className="p-2">
+                        {vehicles.filter(v => v.plate.toLowerCase().includes(editPlate.toLowerCase())).slice(0, 5).map(v => (
+                          <button
+                            key={v.plate}
+                            type="button"
+                            onClick={() => {
+                              setEditPlate(v.plate);
+                              setEditCostCenter(v.costCenter || '');
+                              setIsEditPlateSearchOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all text-left"
+                          >
+                            <span className="text-xs font-black text-slate-800 dark:text-white uppercase">{v.plate}</span>
+                            <span className="text-[10px] text-slate-400 font-bold">{v.model}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Centro de Custo</label>
+                  <input
+                    value={editCostCenter}
+                    onChange={(e) => setEditCostCenter(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl font-black text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Department */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Departamento</label>
+                <input
+                  value={editDept}
+                  onChange={(e) => setEditDept(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl font-black text-sm"
+                />
+              </div>
+
+              {/* Priority and Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prioridade</label>
+                  <div className="flex gap-2">
+                    {(['normal', 'alta', 'urgente'] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setEditPriority(p)}
+                        className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border-2 transition-all ${editPriority === p
+                          ? (p === 'urgente' ? 'bg-red-500 border-red-500 text-white' : p === 'alta' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-blue-500 border-blue-500 text-white')
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as RequestStatus)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl font-black text-sm"
+                  >
+                    <option value="aprovacao">Aprovação</option>
+                    <option value="separacao">Separação</option>
+                    <option value="entregue">Entregue</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 flex gap-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => setEditingRequest(null)}
+                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editItems.every(item => item.sku && item.qty > 0) || editItems.length === 0}
+                  className="flex-[2] py-3 bg-blue-500 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                  </svg>
+                  Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20">
+              <div className="flex items-center gap-3">
+                <div className="size-10 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white">Confirmar Exclusão</h3>
+                  <p className="text-sm text-slate-500">Esta ação não pode ser desfeita</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                Tem certeza que deseja remover a solicitação <strong>{deleteConfirmId}</strong>? Todos os dados serão perdidos.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-black hover:bg-slate-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteRequest}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-black hover:bg-red-600 transition-all"
+                >
+                  Sim, Remover
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div >
   );

@@ -10,6 +10,12 @@ import { LoginPage } from './components/LoginPage';
 import { ModuleSelector } from './components/ModuleSelector';
 import { api, AUTH_TOKEN_KEY } from './api-client';
 import { formatDateTimePtBR, formatTimePtBR, parseDateLike } from './utils/dateTime';
+import {
+  normalizeAllowedWarehouses,
+  normalizeUserModules,
+  normalizeUserRole,
+  normalizeWorkshopAccess,
+} from './utils/userAccess';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
 const Receiving = lazy(() => import('./pages/Receiving').then((module) => ({ default: module.Receiving })));
@@ -42,6 +48,37 @@ const VehicleManagement = lazy(() => import('./pages/workshop').then((module) =>
 
 import type { VehicleDetail, PreventiveKPIs, ActivePlan, MaintenanceAlert, MaintenancePlan, PreventiveSchedule, InspectionTemplate } from './types';
 
+
+// localStorage helpers for mock data persistence
+const STORAGE_KEYS = {
+  INVENTORY: 'logiwms_inventory',
+  REQUESTS: 'logiwms_requests',
+  VEHICLES: 'logiwms_vehicles',
+  WAREHOUSES: 'logiwms_warehouses',
+  USERS: 'logiwms_users',
+  MOVEMENTS: 'logiwms_movements',
+  PURCHASE_ORDERS: 'logiwms_purchase_orders',
+  NOTIFICATIONS: 'logiwms_notifications',
+  ACTIVITIES: 'logiwms_activities',
+};
+
+const saveToStorage = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error('Error saving to localStorage:', e);
+  }
+};
+
+const loadFromStorage = (key: string, defaultValue: any = null) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (e) {
+    console.error('Error loading from localStorage:', e);
+    return defaultValue;
+  }
+};
 
 export const App: React.FC = () => {
 
@@ -310,6 +347,34 @@ export const App: React.FC = () => {
   };
 
   const nowIso = () => new Date().toISOString();
+
+  const normalizeUserSession = (rawUser: any): User => {
+    const normalizedRole = normalizeUserRole(rawUser?.role);
+    const normalizedModules = normalizeUserModules(rawUser?.modules, normalizedRole);
+    const normalizedWarehouses = normalizeAllowedWarehouses(
+      rawUser?.allowedWarehouses ?? rawUser?.allowed_warehouses,
+      ['ARMZ28']
+    );
+
+    return {
+      id: String(rawUser?.id || `usr-${Date.now()}`),
+      name: String(rawUser?.name || 'Usuário'),
+      email: String(rawUser?.email || ''),
+      role: normalizedRole,
+      status: String(rawUser?.status || '').toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo',
+      lastAccess: toPtBrDateTime(rawUser?.lastAccess ?? rawUser?.last_access, formatDateTimePtBR(new Date(), '')),
+      avatar:
+        String(rawUser?.avatar || '').trim() ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(String(rawUser?.name || 'Usuario'))}&background=0D8ABC&color=fff`,
+      modules: normalizedModules,
+      allowedWarehouses: normalizedWarehouses,
+      hasWorkshopAccess: normalizeWorkshopAccess(
+        rawUser?.modules,
+        rawUser?.hasWorkshopAccess ?? rawUser?.has_workshop_access,
+        normalizedRole
+      ),
+    };
+  };
 
   const generateUuid = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -610,6 +675,105 @@ export const App: React.FC = () => {
     }
   };
 
+  // Function to seed mock data for testing without backend
+  const seedMockData = () => {
+    console.log('=== SEEDING MOCK DATA ===');
+    
+    // Seed Warehouses
+    const mockWarehouses: Warehouse[] = [
+      { id: 'ARMZ28', name: 'CD Manaus', description: 'Centro de Distribuição Manaus', location: 'Manaus - AM', isActive: true, managerName: 'João Silva', managerEmail: 'joao@logiwms.com' },
+      { id: 'ARMZ33', name: 'CD São Paulo', description: 'Centro de Distribuição São Paulo', location: 'São Paulo - SP', isActive: true, managerName: 'Maria Santos', managerEmail: 'maria@logiwms.com' }
+    ];
+    setWarehouses(mockWarehouses);
+    saveToStorage(STORAGE_KEYS.WAREHOUSES, mockWarehouses);
+
+    // Seed Inventory
+    const mockInventory: InventoryItem[] = [
+      { sku: 'SKU-000028', name: 'Item Teste 28', location: 'A-01-01', batch: 'B001', expiry: '2026-12-31', quantity: 50, status: 'disponivel', imageUrl: '', category: 'Teste', unit: 'UN', minQty: 10, maxQty: 100, leadTime: 7, safetyStock: 5, warehouseId: 'ARMZ28' },
+      { sku: 'SKU-000030', name: 'Item Teste 30', location: 'A-01-02', batch: 'B002', expiry: '2026-12-31', quantity: 25, status: 'disponivel', imageUrl: '', category: 'Teste', unit: 'UN', minQty: 5, maxQty: 50, leadTime: 7, safetyStock: 5, warehouseId: 'ARMZ28' },
+      { sku: 'SKU-000011', name: 'Item Teste 11', location: 'B-02-01', batch: 'B003', expiry: '2026-12-31', quantity: 100, status: 'disponivel', imageUrl: '', category: 'Pneus', unit: 'UN', minQty: 20, maxQty: 200, leadTime: 14, safetyStock: 10, warehouseId: 'ARMZ28' },
+      { sku: 'OLEO-15W40', name: 'Óleo Motor 15W40', location: 'C-01-01', batch: 'B004', expiry: '2027-06-30', quantity: 200, status: 'disponivel', imageUrl: '', category: 'Óleo', unit: 'L', minQty: 50, maxQty: 500, leadTime: 10, safetyStock: 25, warehouseId: 'ARMZ28' },
+      { sku: 'FILT-001', name: 'Filtro de Óleo', location: 'C-01-02', batch: 'B005', expiry: '2027-12-31', quantity: 80, status: 'disponivel', imageUrl: '', category: 'Filtros', unit: 'UN', minQty: 15, maxQty: 150, leadTime: 10, safetyStock: 10, warehouseId: 'ARMZ28' }
+    ];
+    setInventory(mockInventory);
+    saveToStorage(STORAGE_KEYS.INVENTORY, mockInventory);
+    setInventoryWarehouseScope('ARMZ28');
+    setIsInventoryFullyLoaded(true);
+
+    // Seed Vehicles
+    const mockVehicles: Vehicle[] = [
+      { plate: 'BGM-1001', model: 'Volvo FH 540', type: 'Caminhão', status: 'Disponível', lastMaintenance: '15/01/2026', costCenter: 'OPS-CD' },
+      { plate: 'CHN-1002', model: 'Mercedes Actros', type: 'Carreta', status: 'Disponível', lastMaintenance: '20/01/2026', costCenter: 'MAN-OFI' },
+      { plate: 'DIO-1003', model: 'Volvo FH 460', type: 'Utilitário', status: 'Em Viagem', lastMaintenance: '10/01/2026', costCenter: 'OPS-CD' },
+      { plate: 'ELQ-1004', model: 'Scania R450', type: 'Caminhão', status: 'Manutenção', lastMaintenance: '25/01/2026', costCenter: 'OPS-CD' }
+    ];
+    setVehicles(mockVehicles);
+    saveToStorage(STORAGE_KEYS.VEHICLES, mockVehicles);
+
+    // Seed Material Requests
+    const mockRequests: MaterialRequest[] = [
+      { id: 'REQ-6037', sku: 'SKU-000028', name: 'Item Teste 28', qty: 2, plate: 'BGM-1001', dept: 'OF-OPERAÇÕES', priority: 'normal', status: 'aprovacao', timestamp: '14:05', costCenter: 'OPS-CD', warehouseId: 'ARMZ28' },
+      { id: 'REQ-TEST-000041', sku: 'SKU-000030', name: 'Item Teste 30', qty: 1, plate: 'CHN-1002', dept: 'MAN-OFICINA', priority: 'alta', status: 'separacao', timestamp: '13:30', costCenter: 'MAN-OFI', warehouseId: 'ARMZ28' },
+      { id: 'REQ-OLD-0001', sku: 'SKU-000011', name: 'Item Teste 11', qty: 5, plate: 'DIO-1003', dept: 'OF-OPERAÇÕES', priority: 'normal', status: 'entregue', timestamp: '12:00', costCenter: 'OPS-CD', warehouseId: 'ARMZ28' }
+    ];
+    setMaterialRequests(mockRequests);
+    saveToStorage(STORAGE_KEYS.REQUESTS, mockRequests);
+    setPagedMaterialRequests(mockRequests.slice(0, MATERIAL_REQUESTS_PAGE_SIZE));
+    setIsMaterialRequestsFullyLoaded(true);
+    setHasMoreMaterialRequests(false);
+
+    // Seed Purchase Orders
+    const mockPOs: PurchaseOrder[] = [
+      { id: 'PO-001', vendor: 'Fornecedor A', requestDate: '09/02/2026', status: 'requisicao', priority: 'urgente', total: 5000, requester: 'Sistema', items: [{ sku: 'SKU-000028', name: 'Item Teste 28', qty: 20, price: 100 }], warehouseId: 'ARMZ28', approvalHistory: [] },
+      { id: 'PO-002', vendor: 'Fornecedor B', requestDate: '08/02/2026', status: 'aprovado', priority: 'normal', total: 3000, requester: 'João Silva', items: [{ sku: 'OLEO-15W40', name: 'Óleo Motor 15W40', qty: 50, price: 30 }], warehouseId: 'ARMZ28', approvalHistory: [] }
+    ];
+    setPurchaseOrders(mockPOs);
+    saveToStorage(STORAGE_KEYS.PURCHASE_ORDERS, mockPOs);
+    setPagedPurchaseOrders(mockPOs.slice(0, PURCHASE_ORDERS_PAGE_SIZE));
+
+    // Seed Users
+    const mockUsers: User[] = [
+      {
+        id: 'admin',
+        name: 'Administrador',
+        email: 'admin@logiwms.com',
+        role: 'admin',
+        status: 'Ativo',
+        modules: normalizeUserModules(['warehouse', 'workshop'], 'admin'),
+        allowedWarehouses: ['ARMZ28', 'ARMZ33'],
+        lastAccess: formatDateTimePtBR(new Date(), ''),
+        avatar: 'https://ui-avatars.com/api/?name=Administrador&background=0D8ABC&color=fff',
+        hasWorkshopAccess: true,
+      },
+      {
+        id: 'oper',
+        name: 'Operador',
+        email: 'oper@logiwms.com',
+        role: 'operator',
+        status: 'Ativo',
+        modules: normalizeUserModules(['warehouse'], 'operator'),
+        allowedWarehouses: ['ARMZ28'],
+        lastAccess: formatDateTimePtBR(new Date(), ''),
+        avatar: 'https://ui-avatars.com/api/?name=Operador&background=0D8ABC&color=fff',
+        hasWorkshopAccess: false,
+      }
+    ];
+    setUsers(mockUsers);
+    saveToStorage(STORAGE_KEYS.USERS, mockUsers);
+
+    // Seed Movements
+    const mockMovements: Movement[] = [
+      { id: 'M001', sku: 'SKU-000028', productName: 'Item Teste 28', type: 'entrada', quantity: 50, timestamp: '09/02/2026 14:00', user: 'Sistema', location: 'A-01-01', reason: 'Carga inicial de teste', warehouseId: 'ARMZ28' },
+      { id: 'M002', sku: 'SKU-000030', productName: 'Item Teste 30', type: 'entrada', quantity: 25, timestamp: '09/02/2026 14:00', user: 'Sistema', location: 'A-01-02', reason: 'Carga inicial de teste', warehouseId: 'ARMZ28' }
+    ];
+    setMovements(mockMovements);
+    saveToStorage(STORAGE_KEYS.MOVEMENTS, mockMovements);
+    setPagedMovements(mockMovements.slice(0, MOVEMENTS_PAGE_SIZE));
+
+    console.log('=== MOCK DATA SEEDED SUCCESSFULLY ===');
+    showNotification('Dados de teste carregados com sucesso!', 'success');
+  };
+
   // API Data Fetching
   useEffect(() => {
     const fetchData = async (warehouseId = activeWarehouse) => {
@@ -654,12 +818,7 @@ export const App: React.FC = () => {
 
         const { data: userData } = await api.from('users').select('*');
         if (userData) {
-          const mappedUsers = userData.map((u: any) => ({
-            ...u,
-            lastAccess: toPtBrDateTime(u.last_access),
-            modules: Array.isArray(u.modules) ? u.modules : (u.modules ? JSON.parse(u.modules) : []),
-            allowedWarehouses: Array.isArray(u.allowed_warehouses) ? u.allowed_warehouses : (u.allowed_warehouses ? JSON.parse(u.allowed_warehouses) : ['ARMZ28'])
-          }));
+          const mappedUsers = userData.map((u: any) => normalizeUserSession(u));
           setUsers(mappedUsers);
         }
 
@@ -733,6 +892,8 @@ export const App: React.FC = () => {
         }
       } catch (e) {
         console.error('Session recovery failed', e);
+        localStorage.removeItem('logged_user');
+        api.clearAuthToken();
       } finally {
         setIsLoading(false);
       }
@@ -2394,25 +2555,26 @@ export const App: React.FC = () => {
   };
 
   const handleLogin = (loggedInUser: User, token?: string, registerActivity = true) => {
-    localStorage.setItem('logged_user', JSON.stringify(loggedInUser));
+    const normalizedUser = normalizeUserSession(loggedInUser);
+    localStorage.setItem('logged_user', JSON.stringify(normalizedUser));
     if (token) {
       api.setAuthToken(token);
     }
 
-    setUser(loggedInUser);
+    setUser(normalizedUser);
 
     // Configurar armazéns permitidos baseados na role e permissões
     let allowed: string[] = [];
-    if (loggedInUser.role === 'admin') {
+    if (normalizedUser.role === 'admin') {
       allowed = warehouses.length > 0 ? warehouses.map(w => w.id) : ['ARMZ28', 'ARMZ33'];
     } else {
-      allowed = loggedInUser.allowedWarehouses || [];
+      allowed = normalizedUser.allowedWarehouses || [];
     }
 
     setUserWarehouses(allowed);
 
     if (registerActivity) {
-      addActivity('alerta', 'Login Realizado', `Usuário ${loggedInUser.name} acessou o sistema`);
+      addActivity('alerta', 'Login Realizado', `Usuário ${normalizedUser.name} acessou o sistema`);
     }
 
     // Mostrar ModuleSelector após login (em vez de carregar dados direto)
@@ -2577,6 +2739,41 @@ export const App: React.FC = () => {
         );
       }
       showNotification('Status da solicitação atualizado!', 'success');
+    }
+  };
+
+  const handleRequestEdit = async (id: string, data: Partial<MaterialRequest>) => {
+    const { error } = await api.from('material_requests').update({
+      sku: data.sku,
+      name: data.name,
+      qty: data.qty,
+      plate: data.plate,
+      dept: data.dept,
+      priority: data.priority,
+      status: data.status,
+      cost_center: data.costCenter
+      // NOT sending items as it may not exist in DB schema
+    }).eq('id', id);
+
+    if (error) {
+      showNotification('Erro ao editar solicitação', 'error');
+      throw error;
+    } else {
+      setMaterialRequests(prev => prev.map(request => request.id === id ? { ...request, ...data } : request));
+      setPagedMaterialRequests(prev => prev.map(request => request.id === id ? { ...request, ...data } : request));
+      showNotification('Solicitação editada com sucesso!', 'success');
+    }
+  };
+
+  const handleRequestDelete = async (id: string) => {
+    const { error } = await api.from('material_requests').delete().eq('id', id);
+    if (error) {
+      showNotification('Erro ao remover solicitação', 'error');
+      throw error;
+    } else {
+      setMaterialRequests(prev => prev.filter(request => request.id !== id));
+      setPagedMaterialRequests(prev => prev.filter(request => request.id !== id));
+      showNotification('Solicitação removida com sucesso!', 'success');
     }
   };
 
@@ -3092,6 +3289,8 @@ export const App: React.FC = () => {
                     onProcessPicking={handleUpdateInventoryQuantity}
                     onRequestCreate={handleRequestCreate}
                     onRequestUpdate={handleRequestUpdate}
+                    onRequestEdit={handleRequestEdit}
+                    onRequestDelete={handleRequestDelete}
                     activeWarehouse={activeWarehouse}
                     currentPage={materialRequestsPage}
                     pageSize={MATERIAL_REQUESTS_PAGE_SIZE}
@@ -3367,5 +3566,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-
-

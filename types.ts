@@ -189,8 +189,10 @@ export interface User {
   avatar: string;
   modules: Module[];
   password?: string;
-  allowedWarehouses: string[]; // NOVO: ArmazÃ©ns que o usuÃ¡rio pode acessar
+  allowedWarehouses: string[]; // NOVO: Armazéns que o usuário pode acessar
+  hasWorkshopAccess?: boolean; // NOVO: Acesso ao módulo Oficina
 }
+
 export interface AppNotification {
   id: string;
   title: string;

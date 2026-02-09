@@ -19,12 +19,13 @@ export const Settings: React.FC<SettingsProps> = ({ users, warehouses, onAddUser
     password: '',
     status: 'Ativo',
     modules: [],
-    allowedWarehouses: ['ARMZ28'] // Default
+    allowedWarehouses: ['ARMZ28'], // Default
+    hasWorkshopAccess: false
   });
 
   const openAddModal = () => {
     setEditingUser(null);
-    setNewUser({ name: '', email: '', role: 'buyer', password: '', status: 'Ativo', modules: [], allowedWarehouses: ['ARMZ28'] });
+    setNewUser({ name: '', email: '', role: 'buyer', password: '', status: 'Ativo', modules: [], allowedWarehouses: ['ARMZ28'], hasWorkshopAccess: false });
     setIsModalOpen(true);
   };
 
@@ -53,12 +54,13 @@ export const Settings: React.FC<SettingsProps> = ({ users, warehouses, onAddUser
           avatar: `https://ui-avatars.com/api/?name=${newUser.name}&background=random`,
           password: newUser.password || '',
           modules: newUser.modules || [],
-          allowedWarehouses: newUser.allowedWarehouses || ['ARMZ28']
+          allowedWarehouses: newUser.allowedWarehouses || ['ARMZ28'],
+          hasWorkshopAccess: newUser.hasWorkshopAccess || false
         });
       }
       setIsModalOpen(false);
       setEditingUser(null);
-      setNewUser({ name: '', email: '', role: 'buyer', password: '', status: 'Ativo', modules: [], allowedWarehouses: ['ARMZ28'] });
+      setNewUser({ name: '', email: '', role: 'buyer', password: '', status: 'Ativo', modules: [], allowedWarehouses: ['ARMZ28'], hasWorkshopAccess: false });
     }
   };
 
@@ -325,6 +327,25 @@ export const Settings: React.FC<SettingsProps> = ({ users, warehouses, onAddUser
                     </label>
                   ))}
                 </div>
+              </div>
+
+              {/* Acesso à Oficina */}
+              <div className="pt-2">
+                <label className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${newUser.hasWorkshopAccess
+                  ? 'bg-orange-500/10 border-orange-500/30'
+                  : 'bg-slate-50 dark:bg-slate-800 border-gray-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={newUser.hasWorkshopAccess || false}
+                    onChange={(e) => setNewUser({ ...newUser, hasWorkshopAccess: e.target.checked })}
+                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500 size-5"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-gray-800 dark:text-white">Acesso à Oficina</span>
+                    <span className="text-[10px] font-bold text-gray-500">Permite ao usuário acessar o módulo de gestão de frota e manutenção</span>
+                  </div>
+                </label>
               </div>
 
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 dark:border-slate-800">
