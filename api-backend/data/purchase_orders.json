@@ -1589,7 +1589,7 @@
     "id": "PO-TEST-00049",
     "vendor": "Fornecedor 2",
     "request_date": "2025-12-10T03:29:08.180Z",
-    "status": "pendente",
+    "status": "enviado",
     "priority": "normal",
     "total": 990,
     "requester": "Comprador Teste",
@@ -1603,13 +1603,38 @@
     ],
     "quotes": [],
     "selected_quote_id": null,
-    "sent_to_vendor_at": null,
+    "sent_to_vendor_at": "2026-02-09T03:53:39.580Z",
     "received_at": null,
     "quotes_added_at": null,
-    "approved_at": null,
+    "approved_at": "2026-02-09T03:53:36.317Z",
     "rejected_at": null,
-    "vendor_order_number": "VN-100049",
-    "approval_history": [],
+    "vendor_order_number": "ddd",
+    "approval_history": [
+      {
+        "id": "fd34f53f-26e7-4f4a-9e46-ea0fd961b522",
+        "action": "approved",
+        "by": "Administrador",
+        "at": "2026-02-09T03:53:36.317Z",
+        "status": "aprovado",
+        "description": "Aprovado por gestor"
+      },
+      {
+        "id": "b66c4be9-0174-4e8a-81a0-5edf5df44b87",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T03:53:36.317Z",
+        "status": "aprovado",
+        "description": "Aprovação financeira e operacional concluída"
+      },
+      {
+        "id": "fbf385ac-3448-4b12-b724-e0d71d21f706",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T03:53:39.580Z",
+        "status": "enviado",
+        "description": "Pedido enviado ao fornecedor (Nº ddd)"
+      }
+    ],
     "cost_center": "OPS-CD",
     "warehouse_id": "ARMZ28",
     "created_at": "2025-12-04T03:29:08.180Z"

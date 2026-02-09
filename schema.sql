@@ -230,3 +230,291 @@ VALUES (
   '["ARMZ28","ARMZ33"]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- TABELAS DO MÓDULO DE OFICINA (WORKSHOP)
+-- ============================================
+
+-- Mecânicos
+CREATE TABLE IF NOT EXISTS mechanics (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  specialty TEXT,
+  shift TEXT DEFAULT 'manha',
+  status TEXT DEFAULT 'disponivel',
+  current_work_orders JSONB NOT NULL DEFAULT '[]'::JSONB,
+  orders_completed INTEGER DEFAULT 0,
+  avg_hours_per_order DECIMAL(5, 2) DEFAULT 0,
+  on_time_rate DECIMAL(5, 2) DEFAULT 100,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Ordens de Serviço
+CREATE TABLE IF NOT EXISTS work_orders (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  vehicle_model TEXT,
+  status TEXT DEFAULT 'aguardando',
+  type TEXT DEFAULT 'corretiva',
+  priority TEXT DEFAULT 'normal',
+  mechanic_id TEXT REFERENCES mechanics(id),
+  mechanic_name TEXT,
+  description TEXT NOT NULL,
+  services JSONB NOT NULL DEFAULT '[]'::JSONB,
+  parts JSONB NOT NULL DEFAULT '[]'::JSONB,
+  opened_at TIMESTAMPTZ DEFAULT NOW(),
+  closed_at TIMESTAMPTZ,
+  estimated_hours INTEGER DEFAULT 0,
+  actual_hours DECIMAL(5, 2),
+  cost_center TEXT,
+  cost_labor DECIMAL(10, 2) DEFAULT 0,
+  cost_parts DECIMAL(10, 2) DEFAULT 0,
+  cost_third_party DECIMAL(10, 2) DEFAULT 0,
+  cost_total DECIMAL(10, 2) DEFAULT 0,
+  created_by TEXT,
+  warehouse_id VARCHAR(50) REFERENCES warehouses(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Planos de Manutenção Preventiva
+CREATE TABLE IF NOT EXISTS maintenance_plans (
+  id TEXT PRIMARY KEY,
+  vehicle_type TEXT NOT NULL,
+  vehicle_model TEXT,
+  name TEXT NOT NULL,
+  trigger_type TEXT NOT NULL,
+  trigger_value INTEGER NOT NULL,
+  services JSONB NOT NULL DEFAULT '[]'::JSONB,
+  checklist JSONB NOT NULL DEFAULT '[]'::JSONB,
+  estimated_hours INTEGER DEFAULT 0,
+  estimated_cost DECIMAL(10, 2) DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Manutenções Agendadas
+CREATE TABLE IF NOT EXISTS scheduled_maintenance (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  plan_id TEXT REFERENCES maintenance_plans(id),
+  plan_name TEXT,
+  due_km INTEGER,
+  due_date TIMESTAMPTZ,
+  status TEXT DEFAULT 'pendente',
+  work_order_id TEXT REFERENCES work_orders(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Checklists de Inspeção
+CREATE TABLE IF NOT EXISTS inspection_checklists (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  type TEXT NOT NULL,
+  date TIMESTAMPTZ DEFAULT NOW(),
+  inspector TEXT NOT NULL,
+  items JSONB NOT NULL DEFAULT '[]'::JSONB,
+  status TEXT DEFAULT 'aprovado',
+  notes TEXT,
+  photos JSONB DEFAULT '[]'::JSONB,
+  work_order_id TEXT REFERENCES work_orders(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ===== TABELAS EXPANDIDAS PARA MÓDULO DE OFICINA AVANÇADO =====
+
+-- Detalhes do veículo (expandido)
+CREATE TABLE IF NOT EXISTS vehicle_details (
+  plate VARCHAR(20) PRIMARY KEY REFERENCES vehicles(plate),
+  chassis TEXT,
+  year INTEGER,
+  mileage INTEGER DEFAULT 0,
+  engine_hours INTEGER DEFAULT 0,
+  cost_center TEXT,
+  documents JSONB DEFAULT '[]'::JSONB,
+  components JSONB DEFAULT '[]'::JSONB,
+  maintenance_plan_id TEXT REFERENCES maintenance_plans(id),
+  next_service_km INTEGER,
+  next_service_date TIMESTAMPTZ,
+  status_operacional TEXT DEFAULT 'operacional',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Eventos do veículo (histórico)
+CREATE TABLE IF NOT EXISTS vehicle_events (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  date TIMESTAMPTZ DEFAULT NOW(),
+  mechanic TEXT,
+  workshop TEXT,
+  os_id TEXT REFERENCES work_orders(id),
+  status TEXT,
+  cost DECIMAL(10,2),
+  parts JSONB DEFAULT '[]'::JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Planos de manutenção expandidos
+CREATE TABLE IF NOT EXISTS maintenance_plans_expanded (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  vehicle_type TEXT NOT NULL,
+  vehicle_model TEXT,
+  operation_type TEXT DEFAULT 'normal',
+  triggers JSONB DEFAULT '[]'::JSONB,
+  parts JSONB DEFAULT '[]'::JSONB,
+  checklist_sections JSONB DEFAULT '[]'::JSONB,
+  estimated_hours INTEGER DEFAULT 0,
+  estimated_cost DECIMAL(10,2) DEFAULT 0,
+  services JSONB DEFAULT '[]'::JSONB,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by TEXT
+);
+
+-- Planos ativos por veículo
+CREATE TABLE IF NOT EXISTS active_plans (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  plan_id TEXT REFERENCES maintenance_plans_expanded(id),
+  plan_name TEXT,
+  current_km INTEGER DEFAULT 0,
+  target_km INTEGER,
+  percentage INTEGER DEFAULT 0,
+  remaining_km INTEGER,
+  status TEXT DEFAULT 'em_conformidade',
+  next_service_description TEXT,
+  next_service_due_km INTEGER,
+  next_service_due_date TIMESTAMPTZ,
+  days_remaining INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Milestones de manutenção
+CREATE TABLE IF NOT EXISTS maintenance_milestones (
+  id TEXT PRIMARY KEY,
+  schedule_id TEXT NOT NULL,
+  km INTEGER NOT NULL,
+  date TIMESTAMPTZ,
+  description TEXT NOT NULL,
+  status TEXT DEFAULT 'planejado',
+  type TEXT DEFAULT 'revisao',
+  cost DECIMAL(10,2),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Cronogramas preventivos
+CREATE TABLE IF NOT EXISTS preventive_schedules (
+  id TEXT PRIMARY KEY,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  vehicle_model TEXT,
+  plan_id TEXT REFERENCES maintenance_plans_expanded(id),
+  plan_name TEXT,
+  milestones JSONB DEFAULT '[]'::JSONB,
+  next_service_description TEXT,
+  next_service_km INTEGER,
+  next_service_estimated_date TIMESTAMPTZ,
+  next_service_priority TEXT DEFAULT 'media',
+  next_service_parts JSONB DEFAULT '[]'::JSONB,
+  next_service_total_cost DECIMAL(10,2),
+  next_service_estimated_duration TEXT,
+  predictive_analysis JSONB DEFAULT '{}'::JSONB,
+  system_health JSONB DEFAULT '[]'::JSONB,
+  cost_per_km DECIMAL(10,2),
+  availability DECIMAL(5,2),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Templates de inspeção
+CREATE TABLE IF NOT EXISTS inspection_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  version TEXT DEFAULT '1.0',
+  vehicle_model TEXT,
+  description TEXT,
+  sections JSONB DEFAULT '[]'::JSONB,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by TEXT
+);
+
+-- Alertas de manutenção
+CREATE TABLE IF NOT EXISTS maintenance_alerts (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  vehicle_plate VARCHAR(20) REFERENCES vehicles(plate),
+  severity TEXT DEFAULT 'info',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ,
+  action TEXT
+);
+
+-- Índices para tabelas de oficina
+CREATE INDEX IF NOT EXISTS idx_work_orders_warehouse ON work_orders(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_status ON work_orders(status);
+CREATE INDEX IF NOT EXISTS idx_work_orders_mechanic ON work_orders(mechanic_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_vehicle ON work_orders(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_work_orders_opened_at ON work_orders(opened_at DESC);
+CREATE INDEX IF NOT EXISTS idx_work_orders_services_gin ON work_orders USING GIN (services);
+CREATE INDEX IF NOT EXISTS idx_work_orders_parts_gin ON work_orders USING GIN (parts);
+
+CREATE INDEX IF NOT EXISTS idx_mechanics_status ON mechanics(status);
+CREATE INDEX IF NOT EXISTS idx_mechanics_current_orders_gin ON mechanics USING GIN (current_work_orders);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_maintenance_vehicle ON scheduled_maintenance(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_scheduled_maintenance_status ON scheduled_maintenance(status);
+CREATE INDEX IF NOT EXISTS idx_scheduled_maintenance_due_date ON scheduled_maintenance(due_date);
+
+CREATE INDEX IF NOT EXISTS idx_inspection_checklists_vehicle ON inspection_checklists(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_inspection_checklists_type ON inspection_checklists(type);
+CREATE INDEX IF NOT EXISTS idx_inspection_checklists_date ON inspection_checklists(date DESC);
+
+-- Índices para tabelas expandidas
+CREATE INDEX IF NOT EXISTS idx_vehicle_details_plate ON vehicle_details(plate);
+CREATE INDEX IF NOT EXISTS idx_vehicle_details_status ON vehicle_details(status_operacional);
+CREATE INDEX IF NOT EXISTS idx_vehicle_events_plate ON vehicle_events(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_vehicle_events_type ON vehicle_events(type);
+CREATE INDEX IF NOT EXISTS idx_vehicle_events_date ON vehicle_events(date DESC);
+CREATE INDEX IF NOT EXISTS idx_active_plans_plate ON active_plans(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_active_plans_status ON active_plans(status);
+CREATE INDEX IF NOT EXISTS idx_maintenance_milestones_schedule ON maintenance_milestones(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_preventive_schedules_plate ON preventive_schedules(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_inspection_templates_model ON inspection_templates(vehicle_model);
+CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_plate ON maintenance_alerts(vehicle_plate);
+CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_severity ON maintenance_alerts(severity);
+
+-- Seed inicial de mecânicos
+INSERT INTO mechanics (id, name, specialty, shift, status)
+VALUES
+  ('MEC-001', 'João Silva', 'Motor e Transmissão', 'manha', 'disponivel'),
+  ('MEC-002', 'Ricardo Mendes', 'Elétrica e Eletrônica', 'manha', 'disponivel'),
+  ('MEC-003', 'Carlos Oliveira', 'Suspensão e Freios', 'tarde', 'disponivel')
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed inicial de planos de manutenção
+INSERT INTO maintenance_plans (id, vehicle_type, name, trigger_type, trigger_value, services, checklist, estimated_hours, estimated_cost)
+VALUES
+  ('PLAN-001', 'Caminhão', 'Revisão 10.000 km', 'km', 10000, 
+   '["Troca de óleo e filtros", "Inspeção de freios", "Verificação de pneus", "Lubrificação geral"]'::jsonb,
+   '[{"id":"1","description":"Nível de óleo do motor","category":"Motor","critical":true},{"id":"2","description":"Espessura das lonas de freio","category":"Freios","critical":true},{"id":"3","description":"Pressão dos pneus","category":"Pneus","critical":false}]'::jsonb,
+   4, 800),
+  ('PLAN-002', 'Caminhão', 'Revisão 50.000 km', 'km', 50000,
+   '["Troca de óleo e filtros", "Revisão completa da suspensão", "Inspeção do sistema de freios", "Verificação da transmissão", "Troca de fluido de arrefecimento"]'::jsonb,
+   '[{"id":"1","description":"Nível de óleo do motor","category":"Motor","critical":true},{"id":"2","description":"Holandagem da suspensão","category":"Suspensão","critical":true},{"id":"3","description":"Espessura dos discos de freio","category":"Freios","critical":true},{"id":"4","description":"Nível de fluido de arrefecimento","category":"Motor","critical":true}]'::jsonb,
+   8, 2500),
+  ('PLAN-003', 'Ônibus', 'Revisão Mensal', 'days', 30,
+   '["Troca de óleo", "Inspeção de freios", "Verificação de ar condicionado", "Limpeza de filtros"]'::jsonb,
+   '[{"id":"1","description":"Funcionamento do ar condicionado","category":"Elétrica","critical":false},{"id":"2","description":"Estado das palhetas do limpador","category":"Outros","critical":false},{"id":"3","description":"Nível de fluido de freios","category":"Freios","critical":true}]'::jsonb,
+   3, 600)
+ON CONFLICT (id) DO NOTHING;

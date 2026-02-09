@@ -62,3 +62,14 @@ chmod +x deploy-ec2.sh
 - Nunca commitar `.env`.
 - Ativar backup automatico do RDS.
 - Configurar CloudWatch alarms (CPU, memoria, conexoes DB).
+
+## Opcional: frontend-only no EC2
+Se quiser manter apenas o frontend no EC2 e API fora da AWS:
+
+```bash
+cd ~/logiwms-pro
+chmod +x deploy-ec2-frontend-only.sh
+API_UPSTREAM=http://SEU_BACKEND_PUBLICO:3001 ./deploy-ec2-frontend-only.sh
+```
+
+Guia detalhado: `docs/hybrid-local-backend-ec2-frontend.md`.

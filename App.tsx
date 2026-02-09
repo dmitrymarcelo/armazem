@@ -5,8 +5,9 @@ import { TopBar } from './components/TopBar';
 import { WarehouseSelector } from './components/WarehouseSelector';
 import type { MaterialRequest } from './pages/Expedition';
 type RequestStatus = 'aprovacao' | 'separacao' | 'entregue';
-import { Module, InventoryItem, Activity, Movement, Vendor, Vehicle, PurchaseOrder, Quote, ApprovalRecord, User, AppNotification, CyclicBatch, CyclicCount, Warehouse, PurchaseOrderStatus } from './types';
+import { Module, InventoryItem, Activity, Movement, Vendor, Vehicle, PurchaseOrder, Quote, ApprovalRecord, User, AppNotification, CyclicBatch, CyclicCount, Warehouse, PurchaseOrderStatus, SystemModule, WorkOrder, Mechanic, WorkshopKPIs, WorkOrderStatus } from './types';
 import { LoginPage } from './components/LoginPage';
+import { ModuleSelector } from './components/ModuleSelector';
 import { api, AUTH_TOKEN_KEY } from './api-client';
 import { formatDateTimePtBR, formatTimePtBR, parseDateLike } from './utils/dateTime';
 
@@ -28,6 +29,19 @@ const GeneralAudit = lazy(() =>
 );
 const Settings = lazy(() => import('./pages/Settings').then((module) => ({ default: module.Settings })));
 
+// Workshop Module Imports
+const WorkshopDashboard = lazy(() => import('./pages/workshop').then((module) => ({ default: module.WorkshopDashboard })));
+const WorkOrderKanban = lazy(() => import('./pages/workshop').then((module) => ({ default: module.WorkOrderKanban })));
+const MechanicsManagement = lazy(() => import('./pages/workshop').then((module) => ({ default: module.MechanicsManagement })));
+const VehicleDetailView = lazy(() => import('./pages/workshop').then((module) => ({ default: module.VehicleDetailView })));
+const PreventiveDashboard = lazy(() => import('./pages/workshop').then((module) => ({ default: module.PreventiveDashboard })));
+const MaintenancePlanWizard = lazy(() => import('./pages/workshop').then((module) => ({ default: module.MaintenancePlanWizard })));
+const ScheduleDetail = lazy(() => import('./pages/workshop').then((module) => ({ default: module.ScheduleDetail })));
+const InspectionChecklistEditor = lazy(() => import('./pages/workshop').then((module) => ({ default: module.InspectionChecklistEditor })));
+const VehicleManagement = lazy(() => import('./pages/workshop').then((module) => ({ default: module.VehicleManagement })));
+
+import type { VehicleDetail, PreventiveKPIs, ActivePlan, MaintenanceAlert, MaintenancePlan, PreventiveSchedule, InspectionTemplate } from './types';
+
 
 export const App: React.FC = () => {
 
@@ -47,6 +61,193 @@ export const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [user, setUser] = useState<User | null>(null);
+
+  // System Module Selection (Warehouse vs Workshop)
+  const [currentSystemModule, setCurrentSystemModule] = useState<SystemModule | null>(null);
+  const [workshopActiveModule, setWorkshopActiveModule] = useState<'dashboard' | 'orders' | 'mechanics' | 'preventive' | 'vehicles' | 'plans' | 'schedules' | 'checklists' | 'frota'>('dashboard');
+
+  // Workshop States
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+  const [vehicleDetails, setVehicleDetails] = useState<VehicleDetail[]>([]);
+  const [activePlans, setActivePlans] = useState<ActivePlan[]>([]);
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState<MaintenanceAlert[]>([]);
+  const [preventiveSchedules, setPreventiveSchedules] = useState<PreventiveSchedule[]>([]);
+  const [inspectionTemplates, setInspectionTemplates] = useState<InspectionTemplate[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleDetail | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<PreventiveSchedule | null>(null);
+  const [preventiveKPIs, setPreventiveKPIs] = useState<PreventiveKPIs>({
+    complianceRate: 94.2,
+    complianceChange: 2.4,
+    vehiclesNearService: 12,
+    urgentCount: 2,
+    mtbs: 45,
+    mtbsTrend: 'stable',
+    savings: 12500,
+    savingsTrend: 8.5
+  });
+  const [workshopKPIs, setWorkshopKPIs] = useState<WorkshopKPIs>({
+    mttr: 14.5,
+    mtbf: 45,
+    availability: 94.2,
+    totalCost: 45200,
+    costPerKm: 2.35,
+    preventivePercentage: 65,
+    correctivePercentage: 30,
+    urgentPercentage: 5,
+    openOrders: 12,
+    lateOrders: 3,
+    avgRepairTime: 8.5,
+    mechanicsAvailable: 2,
+    mechanicsOccupied: 3
+  });
+
+  // Expanded Workshop Handlers
+  const handleViewVehicle = (plate: string) => {
+    const vehicle = vehicleDetails.find(v => v.plate === plate);
+    if (vehicle) {
+      setSelectedVehicle(vehicle);
+      setWorkshopActiveModule('vehicles');
+    }
+  };
+
+  const handleCreateMaintenancePlan = async (plan: Omit<MaintenancePlan, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = `PLAN-${Date.now()}`;
+    const { error } = await api.from('maintenance_plans_expanded').insert({
+      id,
+      name: plan.name,
+      vehicle_type: plan.vehicleType,
+      vehicle_model: plan.vehicleModel,
+      operation_type: plan.operationType,
+      triggers: plan.triggers,
+      parts: plan.parts,
+      checklist_sections: plan.checklistSections,
+      estimated_hours: plan.estimatedHours,
+      estimated_cost: plan.estimatedCost,
+      services: plan.services,
+      is_active: true,
+      created_by: user?.name || 'Sistema'
+    });
+
+    if (!error) {
+      showNotification('Plano de manutenção criado com sucesso!', 'success');
+      setWorkshopActiveModule('preventive');
+    } else {
+      showNotification('Erro ao criar plano', 'error');
+    }
+  };
+
+  const handleSaveInspectionTemplate = async (template: Omit<InspectionTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const id = `TMPL-${Date.now()}`;
+    const { error } = await api.from('inspection_templates').insert({
+      id,
+      name: template.name,
+      version: template.version,
+      vehicle_model: template.vehicleModel,
+      description: template.description,
+      sections: template.sections,
+      is_active: template.isActive,
+      created_by: user?.name || 'Sistema'
+    });
+
+    if (!error) {
+      showNotification('Template salvo com sucesso!', 'success');
+      setWorkshopActiveModule('checklists');
+    } else {
+      showNotification('Erro ao salvar template', 'error');
+    }
+  };
+
+  // Vehicle Management Handlers
+  const handleAddVehicle = async (vehicleData: Omit<Vehicle, 'plate'>) => {
+    const plate = `VEH-${Date.now()}`;
+    const newVehicle: Vehicle = { ...vehicleData, plate };
+    const { error } = await api.from('vehicles').insert({
+      plate: newVehicle.plate,
+      model: newVehicle.model,
+      type: newVehicle.type,
+      status: newVehicle.status,
+      cost_center: newVehicle.costCenter,
+      last_maintenance: newVehicle.lastMaintenance
+    });
+
+    if (!error) {
+      setVehicles(prev => [...prev, newVehicle]);
+      showNotification('Veículo cadastrado com sucesso!', 'success');
+    } else {
+      showNotification('Erro ao cadastrar veículo', 'error');
+    }
+  };
+
+  const handleUpdateVehicle = async (updatedVehicle: Vehicle) => {
+    const { error } = await api.from('vehicles').eq('plate', updatedVehicle.plate).update({
+      model: updatedVehicle.model,
+      type: updatedVehicle.type,
+      status: updatedVehicle.status,
+      cost_center: updatedVehicle.costCenter,
+      last_maintenance: updatedVehicle.lastMaintenance
+    });
+
+    if (!error) {
+      setVehicles(prev => prev.map(v => v.plate === updatedVehicle.plate ? updatedVehicle : v));
+      showNotification('Veículo atualizado com sucesso!', 'success');
+    } else {
+      showNotification('Erro ao atualizar veículo', 'error');
+    }
+  };
+
+  const handleDeleteVehicle = async (plate: string) => {
+    const { error } = await api.from('vehicles').eq('plate', plate).delete();
+    if (!error) {
+      setVehicles(prev => prev.filter(v => v.plate !== plate));
+      showNotification('Veículo removido com sucesso!', 'success');
+    } else {
+      showNotification('Erro ao remover veículo', 'error');
+    }
+  };
+
+  // Integration: Request Parts from Workshop to Warehouse
+  const handleRequestPartsFromWorkshop = async (vehiclePlate: string, items: { sku: string; name: string; qty: number }[]) => {
+    const dept = 'OFICINA';
+    const priority = 'normal';
+    
+    for (const item of items) {
+      const requestId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const { error } = await api.from('material_requests').insert({
+        id: requestId,
+        sku: item.sku,
+        name: item.name,
+        qty: item.qty,
+        plate: vehiclePlate,
+        dept: dept,
+        priority: priority,
+        status: 'aprovacao',
+        cost_center: `OFICINA-${vehiclePlate}`,
+        warehouse_id: activeWarehouse,
+        created_by: user?.name || 'Sistema'
+      });
+
+      if (!error) {
+        const newRequest: MaterialRequest = {
+          id: requestId,
+          sku: item.sku,
+          name: item.name,
+          qty: item.qty,
+          plate: vehiclePlate,
+          dept: dept,
+          priority: priority,
+          status: 'aprovacao',
+          timestamp: new Date().toLocaleTimeString('pt-BR'),
+          costCenter: `OFICINA-${vehiclePlate}`,
+          warehouseId: activeWarehouse
+        };
+        setMaterialRequests(prev => [newRequest, ...prev]);
+      }
+    }
+
+    showNotification(`Solicitação SA criada para ${items.length} item(s) do veículo ${vehiclePlate}!`, 'success');
+    addActivity('expedicao', 'Solicitação SA da Oficina', `Veículo ${vehiclePlate} solicitou ${items.length} peça(s)`);
+  };
 
   // Multi-Warehouse States
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -1908,24 +2109,18 @@ export const App: React.FC = () => {
           safety_stock: 5
         });
 
-        if (!error && insertedData && insertedData[0]) {
-          const newItem: InventoryItem = {
-            ...data,
-            sku: insertedData[0].sku,
-            quantity: 0,
-            status: 'disponivel',
-            batch: 'N/A',
-            expiry: 'N/A',
-            location: 'DOCA-01',
-            minQty: 10,
-            maxQty: 1000,
-            leadTime: 7,
-            safetyStock: 5
-          };
-          setInventory(prev => [...prev, newItem]);
-          await recordMovement('entrada', newItem, 0, 'Criação de novo Código de Produto');
-        } else if (error) {
-          showNotification('Erro ao criar item. Verifique a conexão.', 'error');
+        const insertedRow = Array.isArray(insertedData) ? insertedData[0] : insertedData;
+        if (!error && insertedRow) {
+          const mappedInserted = mapInventoryRows([insertedRow])[0];
+          if (mappedInserted) {
+            setInventory(prev => [...prev, mappedInserted]);
+            await recordMovement('entrada', mappedInserted, 0, 'Criação de novo Código de Produto');
+            showNotification('Item criado com sucesso', 'success');
+          } else {
+            showNotification('Item criado, mas houve falha ao atualizar a tela.', 'warning');
+          }
+        } else {
+          showNotification(`Erro ao criar item: ${error?.message || 'falha desconhecida'}`, 'error');
         }
       }
     } else if (type === 'vendor') {
@@ -2209,7 +2404,6 @@ export const App: React.FC = () => {
     // Configurar armazéns permitidos baseados na role e permissões
     let allowed: string[] = [];
     if (loggedInUser.role === 'admin') {
-      // Usar o estado warehouses que já deve estar carregado
       allowed = warehouses.length > 0 ? warehouses.map(w => w.id) : ['ARMZ28', 'ARMZ33'];
     } else {
       allowed = loggedInUser.allowedWarehouses || [];
@@ -2217,34 +2411,15 @@ export const App: React.FC = () => {
 
     setUserWarehouses(allowed);
 
-    // Garantir que o armazém ativo seja um dos permitidos
-    let targetWarehouse = activeWarehouse;
-    if (allowed.length > 0 && !allowed.includes(activeWarehouse)) {
-      targetWarehouse = allowed[0];
-      setActiveWarehouse(targetWarehouse);
-    }
-
     if (registerActivity) {
       addActivity('alerta', 'Login Realizado', `Usuário ${loggedInUser.name} acessou o sistema`);
     }
 
-    if (token) {
-      const bootstrapData = loadBootstrapDataRef.current;
-      if (!bootstrapData) return;
-
-      setIsLoading(true);
-      void (async () => {
-        try {
-          await bootstrapData(targetWarehouse);
-        } catch (error) {
-          console.error('Erro ao carregar dados apos login:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      })();
-    }
+    // Mostrar ModuleSelector após login (em vez de carregar dados direto)
+    setCurrentSystemModule(null);
   };
 
+  // Update logout to also reset system module
   const logout = () => {
     api.clearAuthToken();
     localStorage.removeItem('logged_user');
@@ -2272,22 +2447,10 @@ export const App: React.FC = () => {
     setMaterialRequestsPage(1);
     fullLoadInFlight.current.clear();
     setUser(null);
+    setCurrentSystemModule(null);
+    setWorkOrders([]);
+    setMechanics([]);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-screen bg-slate-900 text-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-black uppercase tracking-widest text-sm animate-pulse">Carregando Sistema...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
 
   const handleUpdateInventoryQuantity = async (
     sku: string,
@@ -2417,191 +2580,792 @@ export const App: React.FC = () => {
     }
   };
 
+  // Workshop Handlers
+  const handleSelectSystemModule = async (module: SystemModule) => {
+    setCurrentSystemModule(module);
+    setIsLoading(true);
+    
+    if (module === 'warehouse') {
+      // Carregar dados do warehouse
+      const bootstrapData = loadBootstrapDataRef.current;
+      if (bootstrapData) {
+        await bootstrapData(activeWarehouse);
+      }
+    } else if (module === 'workshop') {
+      // Carregar dados da oficina
+      await loadWorkshopData();
+    }
+    
+    setIsLoading(false);
+  };
+
+  const loadWorkshopData = async () => {
+    try {
+      // Seed data de veículos para teste
+      const seedVehicles: Vehicle[] = [
+        { plate: 'BGM-1001', model: 'Volvo FH 540', type: 'Caminhão', status: 'Disponível', lastMaintenance: '15/01/2026', costCenter: 'OPS-CD' },
+        { plate: 'CHN-1002', model: 'Mercedes Actros', type: 'Carreta', status: 'Disponível', lastMaintenance: '20/01/2026', costCenter: 'MAN-OFI' },
+        { plate: 'DIO-1003', model: 'Volvo FH 460', type: 'Utilitário', status: 'Em Viagem', lastMaintenance: '10/01/2026', costCenter: 'OPS-CD' },
+        { plate: 'ELQ-1004', model: 'Scania R450', type: 'Caminhão', status: 'Manutenção', lastMaintenance: '25/01/2026', costCenter: 'OPS-CD' },
+        { plate: 'FKQ-1005', model: 'Mercedes Atego', type: 'Utilitário', status: 'Disponível', lastMaintenance: '18/01/2026', costCenter: 'MAN-OFI' },
+        { plate: 'GLB-1006', model: 'Volvo FM 370', type: 'Caminhão', status: 'Disponível', lastMaintenance: '22/01/2026', costCenter: 'OPS-CD' },
+        { plate: 'HMT-1007', model: 'Iveco Stralis', type: 'Carreta', status: 'Em Viagem', lastMaintenance: '12/01/2026', costCenter: 'MAN-OFI' },
+        { plate: 'INY-1008', model: 'Scania G410', type: 'Caminhão', status: 'Disponível', lastMaintenance: '28/01/2026', costCenter: 'OPS-CD' }
+      ];
+
+      // Seed data de mecânicos para teste
+      const seedMechanics: Mechanic[] = [
+        { 
+          id: 'MEC-001', 
+          name: 'João Silva', 
+          specialty: 'Motor e Transmissão', 
+          shift: 'manha', 
+          status: 'disponivel',
+          currentWorkOrders: [],
+          productivity: { ordersCompleted: 45, avgHoursPerOrder: 4.2, onTimeRate: 92 }
+        },
+        { 
+          id: 'MEC-002', 
+          name: 'Pedro Santos', 
+          specialty: 'Elétrica e Eletrônica', 
+          shift: 'tarde', 
+          status: 'ocupado',
+          currentWorkOrders: ['OS-001'],
+          productivity: { ordersCompleted: 38, avgHoursPerOrder: 5.1, onTimeRate: 88 }
+        },
+        { 
+          id: 'MEC-003', 
+          name: 'Carlos Oliveira', 
+          specialty: 'Suspensão e Freios', 
+          shift: 'noite', 
+          status: 'disponivel',
+          currentWorkOrders: [],
+          productivity: { ordersCompleted: 52, avgHoursPerOrder: 3.8, onTimeRate: 95 }
+        },
+        { 
+          id: 'MEC-004', 
+          name: 'Antônio Ferreira', 
+          specialty: 'Pneus e Rodas', 
+          shift: 'manha', 
+          status: 'ocupado',
+          currentWorkOrders: ['OS-002'],
+          productivity: { ordersCompleted: 41, avgHoursPerOrder: 2.5, onTimeRate: 96 }
+        }
+      ];
+
+      // Seed data de ordens de serviço para teste
+      const seedWorkOrders: WorkOrder[] = [
+        {
+          id: 'OS-001',
+          vehiclePlate: 'ELQ-1004',
+          vehicleModel: 'Scania R450',
+          status: 'em_execucao',
+          type: 'corretiva',
+          priority: 'alta',
+          mechanicId: 'MEC-002',
+          mechanicName: 'Pedro Santos',
+          description: 'Troca de óleo do motor e revisão de freios',
+          services: [
+            { id: 'S1', description: 'Troca de óleo motor', category: 'motor', estimatedHours: 1, completed: true },
+            { id: 'S2', description: 'Revisão sistema de freios', category: 'freios', estimatedHours: 2, completed: false }
+          ],
+          parts: [
+            { id: 'P1', sku: 'OLEO-15W40', name: 'Óleo Motor 15W40', qtyRequested: 20, qtyUsed: 18, status: 'entregue', unitCost: 25.50 },
+            { id: 'P2', sku: 'FILT-001', name: 'Filtro de Óleo', qtyRequested: 2, qtyUsed: 2, status: 'entregue', unitCost: 45.00 }
+          ],
+          openedAt: '2026-02-08T08:00:00Z',
+          estimatedHours: 3,
+          actualHours: 2.5,
+          costCenter: 'MAN-OFI',
+          cost: { labor: 150, parts: 600, thirdParty: 0, total: 750 },
+          createdBy: 'Sistema',
+          warehouseId: 'ARMZ28'
+        },
+        {
+          id: 'OS-002',
+          vehiclePlate: 'HMT-1007',
+          vehicleModel: 'Iveco Stralis',
+          status: 'aguardando_pecas',
+          type: 'preventiva',
+          priority: 'normal',
+          mechanicId: 'MEC-004',
+          mechanicName: 'Antônio Ferreira',
+          description: 'Revisão preventiva de 50.000 km',
+          services: [
+            { id: 'S3', description: 'Troca de pneus dianteiros', category: 'pneus', estimatedHours: 1.5, completed: false },
+            { id: 'S4', description: 'Alinhamento e balanceamento', category: 'suspensao', estimatedHours: 2, completed: false }
+          ],
+          parts: [
+            { id: 'P3', sku: 'PNEU-295', name: 'Pneu 295/80 R22.5', qtyRequested: 4, status: 'pendente', unitCost: 850.00 }
+          ],
+          openedAt: '2026-02-07T10:30:00Z',
+          estimatedHours: 3.5,
+          costCenter: 'MAN-OFI',
+          cost: { labor: 200, parts: 3400, thirdParty: 150, total: 3750 },
+          createdBy: 'Sistema',
+          warehouseId: 'ARMZ28'
+        },
+        {
+          id: 'OS-003',
+          vehiclePlate: 'DIO-1003',
+          vehicleModel: 'Volvo FH 460',
+          status: 'aguardando',
+          type: 'corretiva',
+          priority: 'urgente',
+          description: 'Problema no sistema de ar condicionado',
+          services: [
+            { id: 'S5', description: 'Diagnóstico e reparo do ar condicionado', category: 'eletrica', estimatedHours: 3, completed: false }
+          ],
+          parts: [],
+          openedAt: '2026-02-08T14:00:00Z',
+          estimatedHours: 3,
+          costCenter: 'OPS-CD',
+          cost: { labor: 180, parts: 0, thirdParty: 0, total: 180 },
+          createdBy: 'Sistema',
+          warehouseId: 'ARMZ28'
+        }
+      ];
+
+      // Seed data de detalhes de veículos
+      const seedVehicleDetails: VehicleDetail[] = seedVehicles.map(v => ({
+        ...v,
+        chassis: `CHASSIS-${v.plate.replace(/-/g, '')}`,
+        year: 2020 + Math.floor(Math.random() * 5),
+        mileage: 50000 + Math.floor(Math.random() * 200000),
+        engineHours: 2000 + Math.floor(Math.random() * 5000),
+        costCenter: v.costCenter || 'OPS-CD',
+        documents: [
+          { type: 'licenciamento', status: 'ativo', expiryDate: '2026-12-31', notes: 'Licenciamento em dia' },
+          { type: 'seguro', status: 'ativo', expiryDate: '2026-06-30', notes: 'Seguro vigente' }
+        ],
+        components: [
+          { id: 'C1', name: 'Óleo Motor', category: 'oleo_motor', health: 85, status: 'bom', lastService: '2026-01-15', nextServiceKm: 55000, currentValue: '85%', unit: '%' },
+          { id: 'C2', name: 'Pneus Dianteiros', category: 'pneus', health: 60, status: 'atencao', lastService: '2025-11-20', nextServiceKm: 60000, currentValue: '6.5mm', unit: 'mm' },
+          { id: 'C3', name: 'Bateria', category: 'bateria', health: 90, status: 'bom', lastService: '2025-08-10', nextServiceDate: '2027-08-10', currentValue: '12.8V', unit: 'V' },
+          { id: 'C4', name: 'Freios', category: 'freios', health: 70, status: 'bom', lastService: '2025-12-05', nextServiceKm: 58000, currentValue: '70%', unit: '%' }
+        ],
+        events: [
+          { id: 'E1', type: 'manutencao', title: 'Revisão 50.000km', description: 'Troca de filtros e óleo', date: '2026-01-15', mechanic: 'João Silva', status: 'concluido', cost: 450 },
+          { id: 'E2', type: 'checklist', title: 'Checklist Diário', description: 'Verificação de fluidos e pneus', date: '2026-02-08', status: 'aprovado' }
+        ],
+        statusOperacional: v.status === 'Manutenção' ? 'manutencao' : v.status === 'Em Viagem' ? 'em_viagem' : 'operacional'
+      }));
+
+      // Carregar mecânicos do banco ou usar seed
+      const { data: mechanicsData } = await api.from('mechanics').select('*');
+      if (mechanicsData && mechanicsData.length > 0) {
+        setMechanics(mechanicsData.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          specialty: m.specialty,
+          shift: m.shift,
+          status: m.status,
+          currentWorkOrders: m.current_work_orders || [],
+          productivity: {
+            ordersCompleted: m.orders_completed || 0,
+            avgHoursPerOrder: m.avg_hours_per_order || 0,
+            onTimeRate: m.on_time_rate || 100
+          }
+        })));
+      } else {
+        setMechanics(seedMechanics);
+      }
+
+      // Carregar ordens de serviço do banco ou usar seed
+      const { data: workOrdersData } = await api.from('work_orders').select('*').order('opened_at', { ascending: false });
+      if (workOrdersData && workOrdersData.length > 0) {
+        setWorkOrders(workOrdersData.map((wo: any) => ({
+          id: wo.id,
+          vehiclePlate: wo.vehicle_plate,
+          vehicleModel: wo.vehicle_model,
+          status: wo.status,
+          type: wo.type,
+          priority: wo.priority,
+          mechanicId: wo.mechanic_id,
+          mechanicName: wo.mechanic_name,
+          description: wo.description,
+          services: wo.services || [],
+          parts: wo.parts || [],
+          openedAt: wo.opened_at,
+          closedAt: wo.closed_at,
+          estimatedHours: wo.estimated_hours,
+          actualHours: wo.actual_hours,
+          costCenter: wo.cost_center,
+          cost: {
+            labor: wo.cost_labor || 0,
+            parts: wo.cost_parts || 0,
+            thirdParty: wo.cost_third_party || 0,
+            total: wo.cost_total || 0
+          },
+          createdBy: wo.created_by,
+          warehouseId: wo.warehouse_id
+        })));
+      } else {
+        setWorkOrders(seedWorkOrders);
+      }
+
+      // Carregar veículos do banco ou usar seed
+      const { data: vehData } = await api.from('vehicles').select('*');
+      if (vehData && vehData.length > 0) {
+        setVehicles(vehData.map((v: any) => ({
+          plate: v.plate,
+          model: v.model,
+          type: v.type,
+          status: v.status,
+          lastMaintenance: v.last_maintenance,
+          costCenter: v.cost_center
+        })));
+      } else {
+        setVehicles(seedVehicles);
+      }
+
+      // Definir detalhes dos veículos
+      setVehicleDetails(seedVehicleDetails);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados da oficina:', error);
+      showNotification('Erro ao carregar dados da oficina', 'error');
+    }
+  };
+
+  const handleUpdateWorkOrderStatus = async (orderId: string, newStatus: WorkOrderStatus) => {
+    const { error } = await api.from('work_orders').eq('id', orderId).update({ 
+      status: newStatus,
+      closed_at: newStatus === 'finalizada' ? new Date().toISOString() : null
+    });
+    
+    if (!error) {
+      setWorkOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      showNotification(`Status da OS ${orderId} atualizado`, 'success');
+    } else {
+      showNotification('Erro ao atualizar status', 'error');
+    }
+  };
+
+  const handleAssignMechanic = async (orderId: string, mechanicId: string) => {
+    const mechanic = mechanics.find(m => m.id === mechanicId);
+    const { error } = await api.from('work_orders').eq('id', orderId).update({ 
+      mechanic_id: mechanicId,
+      mechanic_name: mechanic?.name
+    });
+    
+    if (!error) {
+      setWorkOrders(prev => prev.map(o => o.id === orderId ? { 
+        ...o, 
+        mechanicId, 
+        mechanicName: mechanic?.name 
+      } : o));
+      showNotification(`Mecânico atribuído à OS ${orderId}`, 'success');
+    } else {
+      showNotification('Erro ao atribuir mecânico', 'error');
+    }
+  };
+
+  const handleCreateWorkOrder = async (workOrder: Omit<WorkOrder, 'id' | 'openedAt' | 'createdBy'>) => {
+    const id = `OS-${Date.now()}`;
+    const openedAt = new Date().toISOString();
+    
+    const { error } = await api.from('work_orders').insert({
+      id,
+      vehicle_plate: workOrder.vehiclePlate,
+      vehicle_model: workOrder.vehicleModel,
+      status: workOrder.status,
+      type: workOrder.type,
+      priority: workOrder.priority,
+      mechanic_id: workOrder.mechanicId,
+      mechanic_name: workOrder.mechanicName,
+      description: workOrder.description,
+      services: workOrder.services,
+      parts: workOrder.parts,
+      opened_at: openedAt,
+      estimated_hours: workOrder.estimatedHours,
+      cost_center: workOrder.costCenter,
+      cost_labor: workOrder.cost.labor,
+      cost_parts: workOrder.cost.parts,
+      cost_third_party: workOrder.cost.thirdParty,
+      cost_total: workOrder.cost.total,
+      created_by: user?.name || 'Sistema',
+      warehouse_id: activeWarehouse
+    });
+
+    if (!error) {
+      const newOrder: WorkOrder = {
+        ...workOrder,
+        id,
+        openedAt,
+        createdBy: user?.name || 'Sistema'
+      };
+      setWorkOrders(prev => [newOrder, ...prev]);
+      showNotification(`OS ${id} criada com sucesso!`, 'success');
+      return id;
+    } else {
+      showNotification('Erro ao criar OS', 'error');
+      return null;
+    }
+  };
+
+  const handleUpdateMechanic = async (updatedMechanic: Mechanic) => {
+    const { error } = await api.from('mechanics').eq('id', updatedMechanic.id).update({
+      name: updatedMechanic.name,
+      specialty: updatedMechanic.specialty,
+      shift: updatedMechanic.shift,
+      status: updatedMechanic.status
+    });
+
+    if (!error) {
+      setMechanics(prev => prev.map(m => m.id === updatedMechanic.id ? updatedMechanic : m));
+      showNotification('Mecânico atualizado com sucesso!', 'success');
+    } else {
+      showNotification('Erro ao atualizar mecânico', 'error');
+    }
+  };
+
+  const handleCreateMechanic = async (mechanicData: Omit<Mechanic, 'id' | 'productivity' | 'currentWorkOrders'>) => {
+    const id = `MEC-${Date.now()}`;
+    
+    const { error } = await api.from('mechanics').insert({
+      id,
+      name: mechanicData.name,
+      specialty: mechanicData.specialty,
+      shift: mechanicData.shift,
+      status: mechanicData.status,
+      current_work_orders: [],
+      orders_completed: 0,
+      avg_hours_per_order: 0,
+      on_time_rate: 100
+    });
+
+    if (!error) {
+      const newMechanic: Mechanic = {
+        ...mechanicData,
+        id,
+        currentWorkOrders: [],
+        productivity: {
+          ordersCompleted: 0,
+          avgHoursPerOrder: 0,
+          onTimeRate: 100
+        }
+      };
+      setMechanics(prev => [...prev, newMechanic]);
+      showNotification('Mecânico cadastrado com sucesso!', 'success');
+    } else {
+      showNotification('Erro ao cadastrar mecânico', 'error');
+    }
+  };
+
+  // Early returns after all handlers
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-black uppercase tracking-widest text-sm animate-pulse">Carregando Sistema...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // Show Module Selector after login if no system module selected
+  if (currentSystemModule === null) {
+    return <ModuleSelector user={user} onSelectModule={handleSelectSystemModule} onLogout={logout} />;
+  }
+
 
   return (
     <div className={`flex w-screen h-screen overflow-hidden ${isDarkMode ? 'dark' : ''}`}>
-      <Sidebar
-        activeModule={activeModule}
-        onModuleChange={(module) => {
-          setActiveModule(module);
-          setIsMobileMenuOpen(false);
-        }}
-        user={user}
-        isCollapsed={isSidebarCollapsed}
-        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        isMobileOpen={isMobileMenuOpen}
-        onMobileClose={() => setIsMobileMenuOpen(false)}
-      />
-      <div className="flex-1 flex flex-col min-w-0 h-full">
-        <TopBar
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-          title={getPageTitle(activeModule)}
-          user={user}
-          onLogout={logout}
-          notifications={appNotifications}
-          onMarkAsRead={markNotificationAsRead}
-          onMarkAllAsRead={markAllNotificationsAsRead}
-          onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        />
-        <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-4 lg:p-6 relative">
-          {notification && (
-            <div className={`fixed top-20 right-8 z-50 animate-in slide-in-from-right px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 border ${notification.type === 'success' ? 'bg-emerald-500 text-white border-emerald-400' :
-              notification.type === 'error' ? 'bg-red-500 text-white border-red-400' :
-                notification.type === 'info' ? 'bg-blue-500 text-white border-blue-400' :
-                  'bg-amber-500 text-white border-amber-400'
-              }`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" />
-              </svg>
-              <span className="font-bold text-sm">{notification.message}</span>
-            </div>
-          )}
-
-          {isDeferredModuleLoading && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider shadow-xl">
-              Carregando dados completos do módulo...
-            </div>
-          )}
-
-          {/* Warehouse Selector Integration */}
-          <WarehouseSelector
-            warehouses={warehouses}
-            activeWarehouse={activeWarehouse}
-            userWarehouses={userWarehouses}
-            onWarehouseChange={(id) => {
-              if (userWarehouses.includes(id) || user?.role === 'admin') {
-                setActiveWarehouse(id);
-              } else {
-                showNotification('Você não tem permissão para acessar este armazém', 'error');
-              }
+      {currentSystemModule === 'warehouse' && (
+        <>
+          <Sidebar
+            activeModule={activeModule}
+            onModuleChange={(module) => {
+              setActiveModule(module);
+              setIsMobileMenuOpen(false);
             }}
+            user={user}
+            isCollapsed={isSidebarCollapsed}
+            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            isMobileOpen={isMobileMenuOpen}
+            onMobileClose={() => setIsMobileMenuOpen(false)}
           />
-
-          <Suspense
-            fallback={
-              <div className="w-full flex items-center justify-center py-20">
-                <div className="flex items-center gap-3 text-slate-500">
-                  <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs font-black uppercase tracking-wider">Carregando módulo...</span>
+          <div className="flex-1 flex flex-col min-w-0 h-full">
+            <TopBar
+              isDarkMode={isDarkMode}
+              toggleDarkMode={toggleDarkMode}
+              title={getPageTitle(activeModule)}
+              user={user}
+              onLogout={logout}
+              notifications={appNotifications}
+              onMarkAsRead={markNotificationAsRead}
+              onMarkAllAsRead={markAllNotificationsAsRead}
+              onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              showBackButton={true}
+              onBackToModules={() => setCurrentSystemModule(null)}
+            />
+            <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-4 lg:p-6 relative">
+              {notification && (
+                <div className={`fixed top-20 right-8 z-50 animate-in slide-in-from-right px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 border ${notification.type === 'success' ? 'bg-emerald-500 text-white border-emerald-400' :
+                  notification.type === 'error' ? 'bg-red-500 text-white border-red-400' :
+                    notification.type === 'info' ? 'bg-blue-500 text-white border-blue-400' :
+                      'bg-amber-500 text-white border-amber-400'
+                  }`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4" />
+                    <path d="M12 8h.01" />
+                  </svg>
+                  <span className="font-bold text-sm">{notification.message}</span>
                 </div>
-              </div>
-            }
-          >
-            {activeModule === 'dashboard' && (
-              <Dashboard
-                inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                activities={activities}
-              />
-            )}
-            {activeModule === 'recebimento' && (
-              <Receiving
-                onFinalize={handleFinalizeReceipt}
-                availablePOs={purchaseOrders.filter(po => po.warehouseId === activeWarehouse && po.status === 'enviado')}
-              />
-            )}
-            {activeModule === 'movimentacoes' && (
-              <Movements
-                movements={pagedMovements}
-                currentPage={movementsPage}
-                pageSize={MOVEMENTS_PAGE_SIZE}
-                hasNextPage={hasMoreMovements}
-                isPageLoading={isMovementsPageLoading}
-                onPageChange={setMovementsPage}
-              />
-            )}
-            {activeModule === 'auditoria_geral' && (
-              <GeneralAudit activeWarehouse={activeWarehouse} />
-            )}
-            {activeModule === 'estoque' && (
-              <Inventory
-                items={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                onUpdateItem={handleUpdateInventoryItem}
-                onCreateAutoPO={handleCreateAutoPO}
-                onRecalculateROP={handleRecalculateROP}
-              />
-            )}
-            {activeModule === 'expedicao' && (
-              <Expedition
-                inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                vehicles={vehicles}
-                requests={pagedMaterialRequests}
-                onProcessPicking={handleUpdateInventoryQuantity}
-                onRequestCreate={handleRequestCreate}
-                onRequestUpdate={handleRequestUpdate}
-                activeWarehouse={activeWarehouse}
-                currentPage={materialRequestsPage}
-                pageSize={MATERIAL_REQUESTS_PAGE_SIZE}
-                hasNextPage={hasMoreMaterialRequests}
-                isPageLoading={isMaterialRequestsPageLoading}
-                onPageChange={setMaterialRequestsPage}
-              />
-            )}
-            {activeModule === 'inventario_ciclico' && (
-              <CyclicInventory
-                activeWarehouse={activeWarehouse}
-                inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                batches={cyclicBatches.filter(b => b.warehouseId === activeWarehouse)}
-                onCreateBatch={handleCreateCyclicBatch}
-                onFinalizeBatch={handleFinalizeCyclicBatch}
-                onClassifyABC={handleClassifyABC}
-              />
-            )}
+              )}
 
-            {activeModule === 'compras' && (
-              <PurchaseOrders
-                user={user}
-                activeWarehouse={activeWarehouse}
-                orders={pagedPurchaseOrders}
-                vendors={vendors}
-                inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                vehicles={vehicles}
-                onCreateOrder={handleCreatePO}
-                onAddQuotes={handleAddQuotes}
-                onSendToApproval={handleSendToApproval}
-                onMarkAsSent={handleMarkAsSent}
-                onApprove={handleApprovePO}
-                onReject={handleRejectPO}
-                currentPage={purchaseOrdersPage}
-                pageSize={PURCHASE_ORDERS_PAGE_SIZE}
-                hasNextPage={hasMorePurchaseOrders}
-                isPageLoading={isPurchaseOrdersPageLoading}
-                onPageChange={setPurchaseOrdersPage}
-              />
-            )}
-            {activeModule === 'cadastro' && (
-              <MasterData
-                inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
-                vendors={vendors}
-                vehicles={vehicles}
-                onAddRecord={handleAddMasterRecord}
-                onRemoveRecord={handleRemoveMasterRecord}
-                onImportRecords={handleImportMasterRecords}
-                onSyncAPI={handleSyncFleetAPI}
-              />
-            )}
-            {activeModule === 'relatorios' && (
-              <Reports
-                orders={purchaseOrders.filter(po => po.warehouseId === activeWarehouse)}
-              />
-            )}
-            {activeModule === 'configuracoes' && (
-              <Settings
-                users={users}
+              {isDeferredModuleLoading && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider shadow-xl">
+                  Carregando dados completos do módulo...
+                </div>
+              )}
+
+              {/* Warehouse Selector Integration */}
+              <WarehouseSelector
                 warehouses={warehouses}
-                onAddUser={handleAddUser}
-                onUpdateUser={handleUpdateUser}
-                onDeleteUser={handleDeleteUser}
+                activeWarehouse={activeWarehouse}
+                userWarehouses={userWarehouses}
+                onWarehouseChange={(id) => {
+                  if (userWarehouses.includes(id) || user?.role === 'admin') {
+                    setActiveWarehouse(id);
+                  } else {
+                    showNotification('Você não tem permissão para acessar este armazém', 'error');
+                  }
+                }}
               />
-            )}
-          </Suspense>
-        </main>
-      </div>
+
+              <Suspense
+                fallback={
+                  <div className="w-full flex items-center justify-center py-20">
+                    <div className="flex items-center gap-3 text-slate-500">
+                      <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-black uppercase tracking-wider">Carregando módulo...</span>
+                    </div>
+                  </div>
+                }
+              >
+                {activeModule === 'dashboard' && (
+                  <Dashboard
+                    inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    activities={activities}
+                  />
+                )}
+                {activeModule === 'recebimento' && (
+                  <Receiving
+                    onFinalize={handleFinalizeReceipt}
+                    availablePOs={purchaseOrders.filter(po => po.warehouseId === activeWarehouse && po.status === 'enviado')}
+                  />
+                )}
+                {activeModule === 'movimentacoes' && (
+                  <Movements
+                    movements={pagedMovements}
+                    currentPage={movementsPage}
+                    pageSize={MOVEMENTS_PAGE_SIZE}
+                    hasNextPage={hasMoreMovements}
+                    isPageLoading={isMovementsPageLoading}
+                    onPageChange={setMovementsPage}
+                  />
+                )}
+                {activeModule === 'auditoria_geral' && (
+                  <GeneralAudit activeWarehouse={activeWarehouse} />
+                )}
+                {activeModule === 'estoque' && (
+                  <Inventory
+                    items={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    onUpdateItem={handleUpdateInventoryItem}
+                    onCreateAutoPO={handleCreateAutoPO}
+                    onRecalculateROP={handleRecalculateROP}
+                  />
+                )}
+                {activeModule === 'expedicao' && (
+                  <Expedition
+                    inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    vehicles={vehicles}
+                    requests={pagedMaterialRequests}
+                    onProcessPicking={handleUpdateInventoryQuantity}
+                    onRequestCreate={handleRequestCreate}
+                    onRequestUpdate={handleRequestUpdate}
+                    activeWarehouse={activeWarehouse}
+                    currentPage={materialRequestsPage}
+                    pageSize={MATERIAL_REQUESTS_PAGE_SIZE}
+                    hasNextPage={hasMoreMaterialRequests}
+                    isPageLoading={isMaterialRequestsPageLoading}
+                    onPageChange={setMaterialRequestsPage}
+                  />
+                )}
+                {activeModule === 'inventario_ciclico' && (
+                  <CyclicInventory
+                    activeWarehouse={activeWarehouse}
+                    inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    batches={cyclicBatches.filter(b => b.warehouseId === activeWarehouse)}
+                    onCreateBatch={handleCreateCyclicBatch}
+                    onFinalizeBatch={handleFinalizeCyclicBatch}
+                    onClassifyABC={handleClassifyABC}
+                  />
+                )}
+
+                {activeModule === 'compras' && (
+                  <PurchaseOrders
+                    user={user}
+                    activeWarehouse={activeWarehouse}
+                    orders={pagedPurchaseOrders}
+                    vendors={vendors}
+                    inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    vehicles={vehicles}
+                    onCreateOrder={handleCreatePO}
+                    onAddQuotes={handleAddQuotes}
+                    onSendToApproval={handleSendToApproval}
+                    onMarkAsSent={handleMarkAsSent}
+                    onApprove={handleApprovePO}
+                    onReject={handleRejectPO}
+                    currentPage={purchaseOrdersPage}
+                    pageSize={PURCHASE_ORDERS_PAGE_SIZE}
+                    hasNextPage={hasMorePurchaseOrders}
+                    isPageLoading={isPurchaseOrdersPageLoading}
+                    onPageChange={setPurchaseOrdersPage}
+                  />
+                )}
+                {activeModule === 'cadastro' && (
+                  <MasterData
+                    inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                    vendors={vendors}
+                    onAddRecord={handleAddMasterRecord}
+                    onRemoveRecord={handleRemoveMasterRecord}
+                    onImportRecords={handleImportMasterRecords}
+                  />
+                )}
+                {activeModule === 'relatorios' && (
+                  <Reports
+                    orders={purchaseOrders.filter(po => po.warehouseId === activeWarehouse)}
+                  />
+                )}
+                {activeModule === 'configuracoes' && (
+                  <Settings
+                    users={users}
+                    warehouses={warehouses}
+                    onAddUser={handleAddUser}
+                    onUpdateUser={handleUpdateUser}
+                    onDeleteUser={handleDeleteUser}
+                  />
+                )}
+              </Suspense>
+            </main>
+          </div>
+        </>
+      )}
+
+      {currentSystemModule === 'workshop' && (
+        <div className="flex-1 flex flex-col min-w-0 h-full bg-background-light dark:bg-background-dark">
+          {/* Workshop Top Bar */}
+          <div className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setCurrentSystemModule(null)}
+                className="flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span className="text-sm font-medium">Voltar</span>
+              </button>
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Oficina</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-500 dark:text-slate-400">{user?.name}</span>
+              <button
+                onClick={logout}
+                className="p-2 text-slate-500 hover:text-red-500 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Workshop Navigation */}
+          <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 lg:px-6 py-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setWorkshopActiveModule('dashboard')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'dashboard'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('orders')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'orders'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Ordens de Serviço
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('mechanics')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'mechanics'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Mecânicos
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('preventive')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'preventive'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Preventiva
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('plans')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'plans'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Planos de Manutenção
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('checklists')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'checklists'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Checklists
+              </button>
+              <button
+                onClick={() => setWorkshopActiveModule('frota')}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  workshopActiveModule === 'frota'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Frota
+              </button>
+            </div>
+          </div>
+
+          {/* Workshop Content */}
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <Suspense
+              fallback={
+                <div className="w-full flex items-center justify-center py-20">
+                  <div className="flex items-center gap-3 text-slate-500">
+                    <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-black uppercase tracking-wider">Carregando...</span>
+                  </div>
+                </div>
+              }
+            >
+              {workshopActiveModule === 'dashboard' && (
+                <WorkshopDashboard
+                  kpis={workshopKPIs}
+                  workOrders={workOrders}
+                  mechanics={mechanics}
+                  onNavigateToOrders={() => setWorkshopActiveModule('orders')}
+                  onNavigateToMechanics={() => setWorkshopActiveModule('mechanics')}
+                  onNavigateToMaintenance={() => setWorkshopActiveModule('preventive')}
+                />
+              )}
+              {workshopActiveModule === 'orders' && (
+                <WorkOrderKanban
+                  workOrders={workOrders}
+                  mechanics={mechanics}
+                  onUpdateStatus={handleUpdateWorkOrderStatus}
+                  onAssignMechanic={handleAssignMechanic}
+                  onCreateOrder={() => {}}
+                  onViewOrder={(order) => {}}
+                />
+              )}
+              {workshopActiveModule === 'mechanics' && (
+                <MechanicsManagement
+                  mechanics={mechanics}
+                  onUpdateMechanic={handleUpdateMechanic}
+                  onCreateMechanic={handleCreateMechanic}
+                />
+              )}
+              {workshopActiveModule === 'preventive' && (
+                <PreventiveDashboard
+                  kpis={preventiveKPIs}
+                  activePlans={activePlans}
+                  alerts={maintenanceAlerts}
+                  onViewVehicle={handleViewVehicle}
+                  onCreatePlan={() => setWorkshopActiveModule('plans')}
+                  onViewAllVehicles={() => setWorkshopActiveModule('vehicles')}
+                  onResolveAlert={(id) => setMaintenanceAlerts(prev => prev.filter(a => a.id !== id))}
+                />
+              )}
+              {workshopActiveModule === 'vehicles' && selectedVehicle && (
+                <VehicleDetailView
+                  vehicle={selectedVehicle}
+                  onBack={() => setWorkshopActiveModule('preventive')}
+                  onCreateMaintenance={() => setWorkshopActiveModule('plans')}
+                  onViewEvent={(event) => {}}
+                />
+              )}
+              {workshopActiveModule === 'plans' && (
+                <MaintenancePlanWizard
+                  onSave={handleCreateMaintenancePlan}
+                  onCancel={() => setWorkshopActiveModule('preventive')}
+                  availableVehicles={vehicles.map(v => ({ model: v.model, type: v.type }))}
+                />
+              )}
+              {workshopActiveModule === 'schedules' && selectedSchedule && (
+                <ScheduleDetail
+                  schedule={selectedSchedule}
+                  onBack={() => setWorkshopActiveModule('preventive')}
+                  onExportPDF={() => showNotification('PDF exportado!', 'success')}
+                  onScheduleAppointment={() => showNotification('Agendamento solicitado!', 'success')}
+                  onViewCalendar={() => {}}
+                />
+              )}
+              {workshopActiveModule === 'checklists' && (
+                <InspectionChecklistEditor
+                  onSave={handleSaveInspectionTemplate}
+                  onCancel={() => setWorkshopActiveModule('dashboard')}
+                  availableModels={vehicles.map(v => v.model)}
+                />
+              )}
+              {workshopActiveModule === 'frota' && (
+                <VehicleManagement
+                  vehicles={vehicles}
+                  vehicleDetails={vehicleDetails}
+                  inventory={inventory.filter(i => i.warehouseId === activeWarehouse)}
+                  onAddVehicle={handleAddVehicle}
+                  onUpdateVehicle={handleUpdateVehicle}
+                  onDeleteVehicle={handleDeleteVehicle}
+                  onSyncFleetAPI={handleSyncFleetAPI}
+                  onRequestParts={handleRequestPartsFromWorkshop}
+                />
+              )}
+            </Suspense>
+          </main>
+        </div>
+      )}
     </div>
   );
 };
-
 
 

@@ -64,8 +64,10 @@ test-results/
 infra/aws/keys/
 infra/aws/.last-deploy-vars.json
 infra/aws/.last-ssm-command-id.txt
+infra/aws/.last-ssm-update-command-id.txt
 infra/aws/ssm-params.json
 infra/aws/ssm-oneoff.json
+infra/aws/ssm-*.json
 infra/aws/deploy-output.json
 
 # OS files

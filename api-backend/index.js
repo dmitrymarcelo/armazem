@@ -504,6 +504,8 @@ const normalizeTimestampValueForDb = (value) => {
   return parsed.toISOString();
 };
 
+const generateInventorySku = () => `SKU-${Date.now()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+
 const normalizeRowForDb = (table, row) => {
   const next = { ...row };
   const jsonColumns = TABLE_JSON_COLUMNS[table] || [];
@@ -1506,6 +1508,16 @@ app.post('/:table', authenticate, async (req, res) => {
     const nextRow = { ...row };
     if (table === 'users' && 'password' in nextRow) {
       nextRow.password = ensurePasswordHash(nextRow.password);
+    }
+    if (table === 'inventory') {
+      const normalizedSku = typeof nextRow.sku === 'string' ? nextRow.sku.trim() : '';
+      nextRow.sku = normalizedSku || generateInventorySku();
+      if (!nextRow.status) nextRow.status = 'disponivel';
+      if (!nextRow.location) nextRow.location = 'DOCA-01';
+      if (nextRow.quantity === null || nextRow.quantity === undefined || Number.isNaN(Number(nextRow.quantity))) {
+        nextRow.quantity = 0;
+      }
+      if (!nextRow.warehouse_id) nextRow.warehouse_id = 'ARMZ28';
     }
     if (table === 'cyclic_counts') {
       if (!nextRow.id) nextRow.id = crypto.randomUUID();

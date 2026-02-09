@@ -84,6 +84,16 @@ Esperado no retorno:
 - `"database": "connected"`
 - `"mode": "production"`
 
+### Setup automatizado (Windows / PowerShell)
+```powershell
+npm run local:backend:setup
+```
+
+## Modo Híbrido (Backend Local + Frontend EC2)
+- Guia completo: `docs/hybrid-local-backend-ec2-frontend.md`
+- Script EC2 (frontend-only): `deploy-ec2-frontend-only.sh`
+- Template local backend: `api-backend/.env.local.postgres.example`
+
 ## Credenciais seed
 - `admin@nortetech.com` / `admin`
 - `MATIAS@G.COM` / `matias`

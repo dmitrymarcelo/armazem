@@ -12,6 +12,8 @@ interface TopBarProps {
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
   onMobileMenuToggle: () => void;
+  onBackToModules?: () => void;
+  showBackButton?: boolean;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -23,7 +25,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   notifications,
   onMarkAsRead,
   onMarkAllAsRead,
-  onMobileMenuToggle
+  onMobileMenuToggle,
+  onBackToModules,
+  showBackButton
 }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
@@ -33,6 +37,18 @@ export const TopBar: React.FC<TopBarProps> = ({
   return (
     <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111922] px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-3 lg:gap-4 flex-1">
+        {showBackButton && onBackToModules && (
+          <button
+            onClick={onBackToModules}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            title="Voltar para seleção de módulos"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="hidden sm:inline">Voltar</span>
+          </button>
+        )}
         <button
           onClick={onMobileMenuToggle}
           className="lg:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95"
