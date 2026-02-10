@@ -1,18 +1,22 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15
     container_name: logiwms-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: armazem
+      POSTGRES_USER: ${LOCAL_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${LOCAL_DB_NAME:-logiwms_db}
     ports:
-      - "5432:5432"
+      - "${LOCAL_DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LOCAL_DB_USER:-postgres} -d ${LOCAL_DB_NAME:-logiwms_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - app-network
 
@@ -20,17 +24,20 @@ services:
     build: ./api-backend
     container_name: logiwms-backend
     restart: always
+    profiles:
+      - full-stack
     environment:
       - PORT=3001
       - DB_HOST=db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgrespassword
-      - DB_NAME=armazem
+      - DB_USER=${LOCAL_DB_USER:-postgres}
+      - DB_PASSWORD=${LOCAL_DB_PASSWORD:-postgrespassword}
+      - DB_NAME=${LOCAL_DB_NAME:-logiwms_db}
       - DB_PORT=5432
     ports:
       - "3001:3001"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -38,6 +45,8 @@ services:
     build: .
     container_name: logiwms-frontend
     restart: always
+    profiles:
+      - full-stack
     ports:
       - "80:80"
     depends_on:

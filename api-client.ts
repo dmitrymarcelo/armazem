@@ -4,7 +4,9 @@ const trimSlash = (value: string) => value.replace(/\/+$/, '');
 
 const resolveBaseUrl = () => {
   const envUrl = String(import.meta.env.VITE_API_URL || '').trim();
-  if (!envUrl) return '/api';
+  if (!envUrl) {
+    return import.meta.env.DEV ? 'http://127.0.0.1:3001' : '/api';
+  }
   if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
     return trimSlash(envUrl);
   }

@@ -26,10 +26,14 @@ cd ..
 ## Variaveis de ambiente
 Use `.env.example` como base.
 
+Para desenvolvimento local com Docker + PostgreSQL, use tambem:
+- `.env.local.example` -> copie para `.env.local` (arquivo ignorado no Git)
+
 Frontend (raiz):
 - `VITE_API_URL` (opcional)
 - `VITE_API_TIMEOUT_MS` (opcional, default `15000`)
 - `VITE_API_GET_RETRIES` (opcional, default `2`)
+- `LOCAL_DB_*` e `RDS_*` (usadas por `transfer-data.sh`)
 
 Backend (`api-backend`):
 - `PORT` (default `3001`)
@@ -61,6 +65,20 @@ npm run dev
 Aplicacao: `http://localhost:3000`
 
 Health backend: `http://localhost:3001/health`
+
+## Espelhar dados do RDS para PostgreSQL local (Docker)
+1. Copie `.env.local.example` para `.env.local` e preencha `RDS_HOST`, `RDS_DB`, `RDS_USER`, `RDS_PASSWORD`.
+2. Execute:
+```bash
+bash ./transfer-data.sh
+```
+
+Esse fluxo:
+- sobe `docker compose up -d db` (PostgreSQL 15)
+- aguarda readiness com `waitForHealth` (`api-backend/scripts/wait-for-health.mjs`)
+- aplica `schema.sql` localmente
+- limpa dados locais e importa dump `pg_dump` do RDS
+- valida contagens basicas no final
 
 ### Troubleshooting rapido (ECONNREFUSED 127.0.0.1:3001)
 Se aparecer erro de proxy do Vite para `/login`, o backend local nao esta ativo na porta `3001`.

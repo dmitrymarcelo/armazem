@@ -30,6 +30,13 @@ Health check local:
 curl http://localhost:3001/health
 ```
 
+### (Opcional) Espelhar dados do RDS para seu PostgreSQL local
+```bash
+bash ./transfer-data.sh
+```
+
+Preencha `RDS_*` em `.env.local` antes de executar.
+
 ## 2) Expor backend local para acesso externo (obrigatorio)
 
 Como o frontend vai rodar no EC2, ele precisa de uma URL publica para chamar a API.
@@ -95,4 +102,3 @@ API_UPSTREAM=https://api-seu-tunel.exemplo.com DISABLE_EC2_BACKEND=true ./deploy
 - Login no frontend EC2 funciona
 - Criacao/edicao de dados funciona (ex.: Cadastro Geral)
 - Sem erro de CORS nem erro de conexao em `/api/*`
-

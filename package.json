@@ -17,6 +17,7 @@
     "test": "npm run typecheck",
     "local:db:up": "docker compose up -d db",
     "local:db:down": "docker compose stop db",
+    "local:db:transfer": "powershell -ExecutionPolicy Bypass -File scripts/transfer-data.ps1",
     "local:backend:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-local-backend.ps1",
     "clean:local": "npm --prefix api-backend run clean:local",
     "e2e": "playwright test",

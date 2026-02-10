@@ -19,21 +19,28 @@ function Invoke-CheckedCommand {
 
 $root = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $root "api-backend"
-$envPath = Join-Path $backendDir ".env"
-$templatePath = Join-Path $backendDir ".env.local.postgres.example"
+$backendEnvPath = Join-Path $backendDir ".env"
+$backendTemplatePath = Join-Path $backendDir ".env.local.postgres.example"
+$frontendEnvPath = Join-Path $root ".env.local"
+$frontendTemplatePath = Join-Path $root ".env.local.example"
 
-if (-not (Test-Path $templatePath)) {
-  throw "Template não encontrado: $templatePath"
+if (-not (Test-Path $backendTemplatePath)) {
+  throw "Template nao encontrado: $backendTemplatePath"
 }
 
-if (-not (Test-Path $envPath)) {
-  Copy-Item $templatePath $envPath -Force
-  Write-Host "Criado $envPath a partir de $templatePath"
+if (-not (Test-Path $backendEnvPath)) {
+  Copy-Item $backendTemplatePath $backendEnvPath -Force
+  Write-Host "Criado $backendEnvPath a partir de $backendTemplatePath"
 } else {
-  Write-Host "$envPath já existe. Mantendo arquivo atual."
+  Write-Host "$backendEnvPath ja existe. Mantendo arquivo atual."
 }
 
-$lines = Get-Content $envPath
+if ((Test-Path $frontendTemplatePath) -and (-not (Test-Path $frontendEnvPath))) {
+  Copy-Item $frontendTemplatePath $frontendEnvPath -Force
+  Write-Host "Criado $frontendEnvPath a partir de $frontendTemplatePath"
+}
+
+$lines = Get-Content $backendEnvPath
 $origins = @()
 $filteredLines = @()
 foreach ($line in $lines) {
@@ -49,7 +56,7 @@ if ($origins -notcontains "http://localhost:3000") { $origins += "http://localho
 if ($origins -notcontains $Ec2FrontendUrl) { $origins += $Ec2FrontendUrl }
 
 $filteredLines += ("CORS_ORIGIN=" + (($origins | Select-Object -Unique) -join ","))
-Set-Content -Path $envPath -Value ($filteredLines -join "`n") -Encoding UTF8
+Set-Content -Path $backendEnvPath -Value ($filteredLines -join "`n") -Encoding UTF8
 
 Push-Location $root
 try {
@@ -58,27 +65,27 @@ try {
     Write-Host "Subindo PostgreSQL local (docker compose)..."
     Invoke-CheckedCommand "docker compose up -d db"
   } else {
-    Write-Warning "Docker não encontrado. Suba o PostgreSQL manualmente e depois rode db:health/db:migrate."
+    Write-Warning "Docker nao encontrado. Suba o PostgreSQL manualmente e depois rode db:health/db:migrate."
   }
 
-  Write-Host "Instalando dependências do backend..."
+  Write-Host "Instalando dependencias do backend..."
   Invoke-CheckedCommand "npm --prefix api-backend ci"
 
   $dbReady = $true
   try {
-    Write-Host "Validando conexão com banco local..."
+    Write-Host "Validando conexao com banco local..."
     Invoke-CheckedCommand "npm --prefix api-backend run db:health"
   }
   catch {
     $dbReady = $false
-    Write-Warning "Falha ao conectar no PostgreSQL local. Verifique DB_HOST/DB_PORT e se o serviço está ativo."
+    Write-Warning "Falha ao conectar no PostgreSQL local. Verifique DB_HOST/DB_PORT e se o servico esta ativo."
   }
 
   if ($dbReady) {
-    Write-Host "Aplicando migração local..."
+    Write-Host "Aplicando migracao local..."
     Invoke-CheckedCommand "npm --prefix api-backend run db:migrate"
   } else {
-    Write-Warning "Migração não aplicada porque o banco local não está acessível."
+    Write-Warning "Migracao nao aplicada porque o banco local nao esta acessivel."
   }
 
   if ($StartBackend) {
