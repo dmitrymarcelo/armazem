@@ -1589,7 +1589,7 @@
     "id": "PO-TEST-00049",
     "vendor": "Fornecedor 2",
     "request_date": "2025-12-10T03:29:08.180Z",
-    "status": "enviado",
+    "status": "recebido",
     "priority": "normal",
     "total": 990,
     "requester": "Comprador Teste",
@@ -1604,7 +1604,7 @@
     "quotes": [],
     "selected_quote_id": null,
     "sent_to_vendor_at": "2026-02-09T03:53:39.580Z",
-    "received_at": null,
+    "received_at": "2026-02-09T15:04:37.995Z",
     "quotes_added_at": null,
     "approved_at": "2026-02-09T03:53:36.317Z",
     "rejected_at": null,
@@ -1688,5 +1688,145 @@
     "approval_history": [],
     "warehouse_id": "ARMZ28",
     "received_at": "2026-02-08T03:58:19.607Z"
+  },
+  {
+    "id": "AUTO-1770654411043-57",
+    "vendor": "A definir via cotações",
+    "request_date": "2026-02-09T16:26:51.042Z",
+    "status": "requisicao",
+    "priority": "urgente",
+    "total": 0,
+    "requester": "Norte Tech AI (Estoque Crítico)",
+    "items": [
+      {
+        "sku": "SKU-000028",
+        "name": "Item Teste 28",
+        "qty": 8,
+        "price": 0
+      }
+    ],
+    "approval_history": [
+      {
+        "id": "541ce344-172d-4c84-8cad-ed482c7ad748",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T16:26:51.042Z",
+        "status": "requisicao",
+        "description": "Pedido automático gerado por regra de estoque crítico"
+      }
+    ],
+    "warehouse_id": "ARMZ28"
+  },
+  {
+    "id": "AUTO-1770654411241-59",
+    "vendor": "A definir via cotações",
+    "request_date": "2026-02-09T16:26:51.241Z",
+    "status": "requisicao",
+    "priority": "urgente",
+    "total": 0,
+    "requester": "Norte Tech AI (Estoque Crítico)",
+    "items": [
+      {
+        "sku": "SKU-000034",
+        "name": "Item Teste 34",
+        "qty": 94,
+        "price": 0
+      }
+    ],
+    "approval_history": [
+      {
+        "id": "72438e11-5245-463c-95d9-e0a92ef21352",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T16:26:51.241Z",
+        "status": "requisicao",
+        "description": "Pedido automático gerado por regra de estoque crítico"
+      }
+    ],
+    "warehouse_id": "ARMZ28"
+  },
+  {
+    "id": "AUTO-1770654411241-59",
+    "vendor": "A definir via cotações",
+    "request_date": "2026-02-09T16:26:51.241Z",
+    "status": "requisicao",
+    "priority": "urgente",
+    "total": 0,
+    "requester": "Norte Tech AI (Estoque Crítico)",
+    "items": [
+      {
+        "sku": "SKU-000034",
+        "name": "Item Teste 34",
+        "qty": 94,
+        "price": 0
+      }
+    ],
+    "approval_history": [
+      {
+        "id": "72438e11-5245-463c-95d9-e0a92ef21352",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T16:26:51.241Z",
+        "status": "requisicao",
+        "description": "Pedido automático gerado por regra de estoque crítico"
+      }
+    ],
+    "warehouse_id": "ARMZ28"
+  },
+  {
+    "id": "AUTO-1770654411745-366",
+    "vendor": "A definir via cotações",
+    "request_date": "2026-02-09T16:26:51.745Z",
+    "status": "requisicao",
+    "priority": "urgente",
+    "total": 0,
+    "requester": "Norte Tech AI (Estoque Crítico)",
+    "items": [
+      {
+        "sku": "SKU-000047",
+        "name": "Item Teste 47",
+        "qty": 107,
+        "price": 0
+      }
+    ],
+    "approval_history": [
+      {
+        "id": "74358825-2172-4c64-899e-244bd12765d0",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T16:26:51.745Z",
+        "status": "requisicao",
+        "description": "Pedido automático gerado por regra de estoque crítico"
+      }
+    ],
+    "warehouse_id": "ARMZ28"
+  },
+  {
+    "id": "AUTO-1770654411745-366",
+    "vendor": "A definir via cotações",
+    "request_date": "2026-02-09T16:26:51.745Z",
+    "status": "requisicao",
+    "priority": "urgente",
+    "total": 0,
+    "requester": "Norte Tech AI (Estoque Crítico)",
+    "items": [
+      {
+        "sku": "SKU-000047",
+        "name": "Item Teste 47",
+        "qty": 107,
+        "price": 0
+      }
+    ],
+    "approval_history": [
+      {
+        "id": "74358825-2172-4c64-899e-244bd12765d0",
+        "action": "status_changed",
+        "by": "Administrador",
+        "at": "2026-02-09T16:26:51.745Z",
+        "status": "requisicao",
+        "description": "Pedido automático gerado por regra de estoque crítico"
+      }
+    ],
+    "warehouse_id": "ARMZ28"
   }
 ]
