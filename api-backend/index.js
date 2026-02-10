@@ -252,6 +252,7 @@ const isAllowedColumn = (table, column) => {
 };
 
 const areColumnsAllowed = (table, columns) => columns.every((column) => isAllowedColumn(table, column));
+const quoteIdentifier = (identifier) => `"${String(identifier).replace(/"/g, '""')}"`;
 
 const toScalar = (value) => (Array.isArray(value) ? value[0] : value);
 
@@ -639,6 +640,10 @@ const matchesLoginInput = (user, loginInput) => {
 };
 
 const sendServerError = (res, err, fallbackMessage = 'Erro interno no servidor') => {
+  console.error('[api-error]', getErrorReason(err));
+  if (err?.stack) {
+    console.error(err.stack);
+  }
   const message = !isProd && err instanceof Error ? err.message : fallbackMessage;
   res.status(500).json({ data: null, error: message });
 };
@@ -1458,13 +1463,13 @@ app.get('/:table/count', authenticate, async (req, res) => {
   }
 
   try {
-    let query = `SELECT COUNT(*)::int AS total FROM ${table}`;
+    let query = `SELECT COUNT(*)::int AS total FROM ${quoteIdentifier(table)}`;
     const values = [];
 
     const filterEntries = Object.entries(filters);
     if (filterEntries.length > 0) {
       const whereClause = filterEntries
-        .map(([column], index) => `${column} = $${index + 1}`)
+        .map(([column], index) => `${quoteIdentifier(column)} = $${index + 1}`)
         .join(' AND ');
 
       query += ` WHERE ${whereClause}`;
@@ -1523,13 +1528,13 @@ app.get('/:table', authenticate, async (req, res) => {
   }
 
   try {
-    let query = `SELECT * FROM ${table}`;
+    let query = `SELECT * FROM ${quoteIdentifier(table)}`;
     const values = [];
 
     const filterEntries = Object.entries(filters);
     if (filterEntries.length > 0) {
       const whereClause = filterEntries
-        .map(([column], index) => `${column} = $${index + 1}`)
+        .map(([column], index) => `${quoteIdentifier(column)} = $${index + 1}`)
         .join(' AND ');
 
       query += ` WHERE ${whereClause}`;
@@ -1537,7 +1542,7 @@ app.get('/:table', authenticate, async (req, res) => {
     }
 
     if (order) {
-      query += ` ORDER BY ${order.column} ${order.direction}`;
+      query += ` ORDER BY ${quoteIdentifier(order.column)} ${order.direction}`;
     }
 
     if (limit) {
@@ -1652,7 +1657,7 @@ app.post('/:table', authenticate, async (req, res) => {
 
       const values = Object.values(row);
       const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
-      const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+      const query = `INSERT INTO ${quoteIdentifier(table)} (${columns.map((column) => quoteIdentifier(column)).join(', ')}) VALUES (${placeholders}) RETURNING *`;
 
       const result = await client.query(query, values);
       insertedRows.push(result.rows[0]);
@@ -1782,12 +1787,12 @@ app.patch('/:table', authenticate, async (req, res) => {
     const updateEntries = Object.entries(dbUpdates);
     const filterEntries = Object.entries(filters);
 
-    const setClause = updateEntries.map(([column], index) => `${column} = $${index + 1}`).join(', ');
+    const setClause = updateEntries.map(([column], index) => `${quoteIdentifier(column)} = $${index + 1}`).join(', ');
     const whereClause = filterEntries
-      .map(([column], index) => `${column} = $${updateEntries.length + index + 1}`)
+      .map(([column], index) => `${quoteIdentifier(column)} = $${updateEntries.length + index + 1}`)
       .join(' AND ');
     const beforeWhereClause = filterEntries
-      .map(([column], index) => `${column} = $${index + 1}`)
+      .map(([column], index) => `${quoteIdentifier(column)} = $${index + 1}`)
       .join(' AND ');
 
     const values = [
@@ -1795,10 +1800,10 @@ app.patch('/:table', authenticate, async (req, res) => {
       ...filterEntries.map(([, value]) => coerceValue(value)),
     ];
 
-    const beforeQuery = `SELECT * FROM ${table} WHERE ${beforeWhereClause}`;
+    const beforeQuery = `SELECT * FROM ${quoteIdentifier(table)} WHERE ${beforeWhereClause}`;
     const beforeResult = await pool.query(beforeQuery, filterEntries.map(([, value]) => coerceValue(value)));
 
-    const query = `UPDATE ${table} SET ${setClause} WHERE ${whereClause} RETURNING *`;
+    const query = `UPDATE ${quoteIdentifier(table)} SET ${setClause} WHERE ${whereClause} RETURNING *`;
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
@@ -1895,10 +1900,10 @@ app.delete('/:table', authenticate, async (req, res) => {
 
   try {
     const filterEntries = Object.entries(filters);
-    const whereClause = filterEntries.map(([column], index) => `${column} = $${index + 1}`).join(' AND ');
+    const whereClause = filterEntries.map(([column], index) => `${quoteIdentifier(column)} = $${index + 1}`).join(' AND ');
     const values = filterEntries.map(([, value]) => coerceValue(value));
 
-    const query = `DELETE FROM ${table} WHERE ${whereClause} RETURNING *`;
+    const query = `DELETE FROM ${quoteIdentifier(table)} WHERE ${whereClause} RETURNING *`;
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {

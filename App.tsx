@@ -1415,7 +1415,7 @@ export const App: React.FC = () => {
     reason: string,
     orderId?: string,
     warehouseId?: string
-  ) => {
+  ): Promise<boolean> => {
     const movementTimestampIso = nowIso();
     const movementId = generateUuid();
     const movementWarehouseId = warehouseId || item.warehouseId || activeWarehouse;
@@ -1452,8 +1452,11 @@ export const App: React.FC = () => {
       if (movementWarehouseId === activeWarehouse && movementsPage === 1) {
         setPagedMovements(prev => [newMovement, ...prev].slice(0, MOVEMENTS_PAGE_SIZE));
       }
+      return true;
     } else {
       console.error('Error recording movement:', error);
+      showNotification(`Falha ao registrar movimentação para ${item.sku}.`, 'error');
+      return false;
     }
   };
 
@@ -3069,7 +3072,26 @@ export const App: React.FC = () => {
 
     if (!error) {
       setInventory(prev => prev.map(i => (i.sku === sku && i.warehouseId === targetWarehouseId) ? { ...i, quantity: newQuantity } : i));
-      await recordMovement('saida', item, qty, reason, orderId, targetWarehouseId);
+      const movementSaved = await recordMovement('saida', item, qty, reason, orderId, targetWarehouseId);
+
+      if (!movementSaved) {
+        const rollbackResult = await api
+          .from('inventory')
+          .eq('sku', sku)
+          .eq('warehouse_id', targetWarehouseId)
+          .update({ quantity: item.quantity });
+
+        if (!rollbackResult.error) {
+          setInventory(prev => prev.map(i => (i.sku === sku && i.warehouseId === targetWarehouseId) ? { ...i, quantity: item.quantity } : i));
+        }
+
+        showNotification(
+          `Saída de ${sku} cancelada: não foi possível registrar a movimentação${rollbackResult.error ? ' e o rollback automático falhou' : ''}.`,
+          'error'
+        );
+        return false;
+      }
+
       showNotification(`Estoque de ${sku} atualizado para ${newQuantity}.`, 'success');
       return true;
     } else {
