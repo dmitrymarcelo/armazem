@@ -3,17 +3,18 @@ set -euo pipefail
 
 # Deploy script for EC2 host.
 # This script must run inside the EC2 instance.
+# This script intentionally does NOT run git clone/pull.
+# Update strategy: perform manual git clone before each deploy.
 
-PROJECT_DIR="${PROJECT_DIR:-$HOME/logiwms-pro}"
-BRANCH="${BRANCH:-main}"
+PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 API_DIR="$PROJECT_DIR/api-backend"
 API_PORT="${API_PORT:-3001}"
 PUBLIC_DIR="${PUBLIC_DIR:-/var/www/logiwms}"
 NGINX_SITE="${NGINX_SITE:-logiwms}"
 
-if [[ ! -d "$PROJECT_DIR/.git" ]]; then
-  echo "Repositorio nao encontrado em $PROJECT_DIR"
-  echo "Defina PROJECT_DIR ou clone o projeto antes do deploy."
+if [[ ! -f "$PROJECT_DIR/package.json" || ! -d "$API_DIR" ]]; then
+  echo "Projeto invalido em $PROJECT_DIR"
+  echo "Execute o script na raiz do repositorio clonado."
   exit 1
 fi
 
@@ -23,22 +24,8 @@ if [[ ! -f "$API_DIR/.env" ]]; then
   exit 1
 fi
 
-echo "[1/7] Atualizando codigo"
+echo "[1/7] Usando codigo local em $PROJECT_DIR (sem git pull)"
 cd "$PROJECT_DIR"
-
-# Preserva configuracao local de ambiente do backend durante o pull.
-ENV_BACKUP="/tmp/logiwms-api-env.backup"
-if [[ -f "$API_DIR/.env" ]]; then
-  cp "$API_DIR/.env" "$ENV_BACKUP"
-fi
-
-git fetch --all --prune
-git checkout "$BRANCH"
-git pull origin "$BRANCH"
-
-if [[ -f "$ENV_BACKUP" ]]; then
-  cp "$ENV_BACKUP" "$API_DIR/.env"
-fi
 
 echo "[2/7] Instalando dependencias"
 npm ci

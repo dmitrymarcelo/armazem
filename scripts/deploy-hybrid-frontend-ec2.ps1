@@ -7,9 +7,7 @@ param(
 
   [string]$Profile = "389364614518",
   [string]$Region = "us-east-1",
-  [string]$Branch = "main",
   [string]$ProjectDir = "/home/ec2-user/logiwms-pro",
-  [string]$RepoUrl = "https://github.com/dmitrymarcelo/armazemEC2-RDS.git",
   [int]$PollSeconds = 8,
   [int]$MaxPolls = 120
 )
@@ -31,13 +29,10 @@ if ($normalizedUpstream -match "127\.0\.0\.1|localhost") {
 
 $remoteCommands = @(
   "set -euo pipefail",
-  "if [ ! -d '$ProjectDir/.git' ]; then git clone '$RepoUrl' '$ProjectDir'; fi",
+  "if [ ! -f '$ProjectDir/package.json' ]; then echo 'Projeto nao encontrado em $ProjectDir. Execute git clone manual antes do deploy.'; exit 1; fi",
   "cd '$ProjectDir'",
-  "git fetch --all --prune",
-  "git checkout '$Branch'",
-  "git pull origin '$Branch'",
   "chmod +x deploy-ec2-frontend-only.sh",
-  "API_UPSTREAM='$normalizedUpstream' BRANCH='$Branch' PROJECT_DIR='$ProjectDir' DISABLE_EC2_BACKEND=true ./deploy-ec2-frontend-only.sh"
+  "API_UPSTREAM='$normalizedUpstream' PROJECT_DIR='$ProjectDir' DISABLE_EC2_BACKEND=true ./deploy-ec2-frontend-only.sh"
 )
 
 $payload = @{
@@ -70,7 +65,7 @@ try {
   }
 
   Write-Host ("SSM command enviado: {0}" -f $commandId) -ForegroundColor Cyan
-  Write-Host ("InstanceId: {0} | Region: {1} | Branch: {2}" -f $InstanceId, $Region, $Branch)
+  Write-Host ("InstanceId: {0} | Region: {1}" -f $InstanceId, $Region)
   Write-Host ("API_UPSTREAM: {0}" -f $normalizedUpstream)
 
   $finalStatuses = @("Success", "Failed", "Cancelled", "TimedOut", "Cancelling")
@@ -142,4 +137,3 @@ finally {
     Remove-Item $tempJson -Force
   }
 }
-

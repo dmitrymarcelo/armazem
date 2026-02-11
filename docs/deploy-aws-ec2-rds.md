@@ -1,87 +1,101 @@
-# Deploy AWS (EC2 + RDS)
+# Deploy AWS (EC2 existente + RDS existente)
 
-Guia rapido para publicar o LogiWMS em producao com EC2 para app e RDS para banco.
+Guia rapido para publicar o LogiWMS com:
+- Frontend: Nginx na EC2
+- Backend: PM2 na mesma EC2
+- Banco: RDS PostgreSQL
 
-## Pre requisitos
-- Conta AWS com acesso a `EC2`, `RDS`, `VPC`, `SSM`.
-- Key Pair EC2 ja criado (arquivo `.pem`).
-- Regiao sugerida: `us-east-1`.
+## Premissas
+- A EC2 ja existe e esta acessivel.
+- O `git clone` sera manual em cada atualizacao (sem `git pull` no deploy).
+- Exemplo de IP publico da EC2: `100.27.33.178`.
 
-## 1) Provisionar infraestrutura
-No AWS CloudShell (na mesma conta/regiao):
+## 1) Acessar a EC2
 
 ```bash
-git clone https://github.com/dmitrymarcelo/armazem.git
-cd armazem
-chmod +x infra/aws/provision-ec2-rds.sh
-KEY_NAME=<seu-keypair> DB_PASSWORD='<senha-forte>' ./infra/aws/provision-ec2-rds.sh
+ssh -i <seu-key.pem> ec2-user@100.27.33.178
 ```
 
-Saida esperada:
-- `EC2 PublicIP`
-- `RDS Endpoint`
+## 2) Bootstrap da instancia (primeira vez)
 
-## 2) Configurar e publicar na EC2
-No seu computador local:
+Na raiz do repositorio clonado na EC2:
 
 ```bash
-ssh -i <seu-key.pem> ec2-user@<EC2_PUBLIC_IP>
+chmod +x infra/aws/bootstrap-ec2.sh
+sudo ./infra/aws/bootstrap-ec2.sh
 ```
 
-Na EC2:
+Esse script instala Node.js, Nginx, PM2 e prepara `/var/www/logiwms`.
+
+## 3) Clonar o projeto (manual)
 
 ```bash
-git clone https://github.com/dmitrymarcelo/armazem.git ~/logiwms-pro
-cp ~/logiwms-pro/api-backend/.env.production.rds.example ~/logiwms-pro/api-backend/.env
-nano ~/logiwms-pro/api-backend/.env
+cd ~
+rm -rf logiwms-pro
+git clone https://github.com/dmitrymarcelo/armazem.git logiwms-pro
+cd logiwms-pro
 ```
 
-Ajuste no `.env`:
-- `DB_HOST=<RDS_ENDPOINT>`
-- `DB_PASSWORD=<DB_PASSWORD>`
-- `CORS_ORIGIN=http://<EC2_PUBLIC_IP>`
-- `JWT_SECRET=<segredo-forte>`
-
-Depois:
+## 4) Configurar backend para RDS
 
 ```bash
-cd ~/logiwms-pro
+cp api-backend/.env.production.rds.example api-backend/.env
+```
+
+Edite `api-backend/.env` com os dados do seu RDS:
+
+```env
+PORT=3001
+NODE_ENV=production
+DB_HOST=<RDS_ENDPOINT>
+DB_PORT=5432
+DB_NAME=armazem
+DB_USER=dmitry
+DB_PASSWORD=dmitry
+DB_SSL=true
+DB_SSL_REJECT_UNAUTHORIZED=false
+JWT_SECRET=<segredo-forte-com-32+-caracteres>
+CORS_ORIGIN=http://100.27.33.178
+```
+
+## 5) Deploy completo (frontend + backend)
+
+```bash
 chmod +x deploy-ec2.sh
-./deploy-ec2.sh
+PROJECT_DIR=$PWD ./deploy-ec2.sh
 ```
 
-## 3) Validar
-- Frontend: `http://<EC2_PUBLIC_IP>`
-- Health: `http://<EC2_PUBLIC_IP>/api/health`
-- PM2: `pm2 status`
-- Nginx: `sudo systemctl status nginx`
+Ordem executada pelo script:
+1. `npm ci` (raiz)
+2. `npm --prefix api-backend ci`
+3. `npm --prefix api-backend run db:health`
+4. `npm --prefix api-backend run db:migrate`
+5. `npm run build` (frontend)
+6. publica `dist` em `/var/www/logiwms`
+7. reinicia PM2 e Nginx
 
-## 4) Producao recomendada
-- Trocar IP por dominio + HTTPS (ALB + ACM ou Nginx + Certbot).
-- Restringir `SSH 22` ao seu IP.
-- Nunca commitar `.env`.
-- Ativar backup automatico do RDS.
-- Configurar CloudWatch alarms (CPU, memoria, conexoes DB).
+## 6) Validacao
+
+```bash
+curl http://100.27.33.178
+curl http://100.27.33.178/api/health
+pm2 status
+pm2 logs logiwms-api --lines 100
+sudo systemctl status nginx --no-pager
+```
+
+## Atualizacao de versao (sem git pull)
+
+Sempre que atualizar:
+1. `rm -rf ~/logiwms-pro`
+2. `git clone ... ~/logiwms-pro`
+3. copiar novamente `api-backend/.env`
+4. executar `PROJECT_DIR=$PWD ./deploy-ec2.sh`
 
 ## Opcional: frontend-only no EC2
-Se quiser manter apenas o frontend no EC2 e API fora da AWS:
 
 ```bash
 cd ~/logiwms-pro
 chmod +x deploy-ec2-frontend-only.sh
-API_UPSTREAM=http://SEU_BACKEND_PUBLICO:3001 ./deploy-ec2-frontend-only.sh
-```
-
-Guia detalhado: `docs/hybrid-local-backend-ec2-frontend.md`.
-
-### Opcional via AWS CLI + SSM (Windows)
-Da sua maquina local, voce pode publicar o frontend no EC2 sem SSH:
-
-```powershell
-npm run deploy:hybrid:ec2 -- `
-  -InstanceId i-xxxxxxxxxxxxxxxxx `
-  -ApiUpstream https://api-seu-tunel.exemplo.com `
-  -Region us-east-1 `
-  -Profile 389364614518 `
-  -Branch main
+API_UPSTREAM=http://SEU_BACKEND_PUBLICO:3001 PROJECT_DIR=$PWD DISABLE_EC2_BACKEND=true ./deploy-ec2-frontend-only.sh
 ```

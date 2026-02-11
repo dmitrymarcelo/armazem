@@ -79,13 +79,16 @@ npm run deploy:hybrid:ec2 -- `
   -InstanceId i-xxxxxxxxxxxxxxxxx `
   -ApiUpstream https://api-seu-tunel.exemplo.com `
   -Region us-east-1 `
-  -Profile 389364614518 `
-  -Branch main
+  -Profile 389364614518
 ```
 
-O script atualiza o codigo no EC2 e executa `deploy-ec2-frontend-only.sh` com:
+O script usa o codigo ja clonado na EC2 e executa `deploy-ec2-frontend-only.sh` com:
 - `API_UPSTREAM=<sua-url-publica>`
 - `DISABLE_EC2_BACKEND=true`
+
+Importante:
+- Nao faz `git clone` nem `git pull`.
+- Para atualizar versao, faca novo clone manual na EC2 antes do deploy.
 
 ### Opcao B: rodar manualmente na EC2
 

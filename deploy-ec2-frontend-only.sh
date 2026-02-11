@@ -3,27 +3,24 @@ set -euo pipefail
 
 # Deploy frontend-only on EC2. API can stay local (outside EC2) behind API_UPSTREAM.
 # This script must run inside the EC2 instance.
+# This script intentionally does NOT run git clone/pull.
 
-PROJECT_DIR="${PROJECT_DIR:-$HOME/logiwms-pro}"
-BRANCH="${BRANCH:-main}"
+PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 PUBLIC_DIR="${PUBLIC_DIR:-/var/www/logiwms}"
 NGINX_SITE="${NGINX_SITE:-logiwms}"
 API_UPSTREAM="${API_UPSTREAM:-http://127.0.0.1:3001}"
 DISABLE_EC2_BACKEND="${DISABLE_EC2_BACKEND:-false}"
 
-if [[ ! -d "$PROJECT_DIR/.git" ]]; then
-  echo "Repositorio nao encontrado em $PROJECT_DIR"
-  echo "Defina PROJECT_DIR ou clone o projeto antes do deploy."
+if [[ ! -f "$PROJECT_DIR/package.json" ]]; then
+  echo "Projeto invalido em $PROJECT_DIR"
+  echo "Execute o script na raiz do repositorio clonado."
   exit 1
 fi
 
 API_UPSTREAM="${API_UPSTREAM%/}"
 
-echo "[1/5] Atualizando codigo"
+echo "[1/5] Usando codigo local em $PROJECT_DIR (sem git pull)"
 cd "$PROJECT_DIR"
-git fetch --all --prune
-git checkout "$BRANCH"
-git pull origin "$BRANCH"
 
 echo "[2/5] Instalando dependencias e build do frontend"
 npm ci
