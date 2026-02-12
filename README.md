@@ -211,3 +211,4 @@ Arquivos adicionados para acelerar publicacao:
 - `deploy-ec2.sh`: deploy no host EC2 (sem git pull; install, migrate, build, pm2, nginx)
 - `api-backend/.env.production.rds.example`: template de ambiente para producao com RDS
 - `docs/deploy-aws-ec2-rds.md`: passo a passo completo
+- Sem deploy automatizado por GitHub Actions: atualizacao via clone manual + execucao do script na EC2
