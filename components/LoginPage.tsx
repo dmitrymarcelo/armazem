@@ -3,6 +3,7 @@ import { User } from '../types';
 import { api } from '../api-client';
 import {
   normalizeAllowedWarehouses,
+  normalizeFleetAccess,
   normalizeUserModules,
   normalizeUserRole,
   normalizeWorkshopAccess,
@@ -86,6 +87,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             hasWorkshopAccess: normalizeWorkshopAccess(
               finalUser.modules,
               finalUser.has_workshop_access ?? finalUser.hasWorkshopAccess,
+              normalizedRole
+            ),
+            hasFleetAccess: normalizeFleetAccess(
+              finalUser.modules,
+              finalUser.has_fleet_access ?? finalUser.hasFleetAccess,
               normalizedRole
             ),
           },

@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test('login + compras + expedicao', async ({ page }) => {
   await page.goto('/');
@@ -8,6 +8,11 @@ test('login + compras + expedicao', async ({ page }) => {
   await page.getByRole('button', { name: /entrar no sistema/i }).click();
 
   await expect(page.getByText(/falha de conexao|not found/i)).toHaveCount(0);
+  const armazemCard = page.getByRole('button', { name: /armazem/i }).first();
+  try {
+    await armazemCard.waitFor({ state: 'visible', timeout: 8000 });
+    await armazemCard.click();
+  } catch {}
 
   const comprasButton = page.getByRole('button', { name: /pedido de compras/i }).first();
   await expect(comprasButton).toBeVisible();

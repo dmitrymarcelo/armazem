@@ -6,17 +6,18 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const apiTarget = env.VITE_API_URL && env.VITE_API_URL.startsWith('http')
     ? env.VITE_API_URL
-    : 'http://127.0.0.1:3001';
+    : 'http://localhost:3001';
 
   return {
     server: {
       port: 3000,
+      strictPort: true,
       host: '0.0.0.0',
       proxy: {
-        '/api/': {
+        '^/api(?:/|$)': {
           target: apiTarget,
           changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/api/, ''),
+          rewrite: (p) => p.replace(/^\/api(?=\/|$)/, ''),
         }
       }
     },

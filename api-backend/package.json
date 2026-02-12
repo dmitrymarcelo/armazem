@@ -6,7 +6,7 @@
     "type": "module",
     "scripts": {
         "start": "node index.js",
-        "dev": "nodemon index.js",
+        "dev": "nodemon --ignore data --ignore data-backups --ignore reports index.js",
         "test": "node --test tests/*.test.js",
         "db:health": "node scripts/db-health.mjs",
         "wait:health": "node scripts/wait-for-health.mjs",

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+﻿﻿import React, { useState } from 'react';
 import { Mechanic, MECHANIC_STATUS_LABELS } from '../../types';
+import NewMechanicModal from './components/NewMechanicModal';
 
 interface MechanicsManagementProps {
   mechanics: Mechanic[];
   onUpdateMechanic: (mechanic: Mechanic) => void;
-  onCreateMechanic: (mechanic: Omit<Mechanic, 'id' | 'productivity' | 'currentWorkOrders'>) => void;
+  onCreateMechanic: (mechanic: Omit<Mechanic, 'id' | 'productivity' | 'currentWorkOrders'>) => Promise<void>;
 }
 
 export const MechanicsManagement: React.FC<MechanicsManagementProps> = ({
@@ -159,6 +160,13 @@ export const MechanicsManagement: React.FC<MechanicsManagementProps> = ({
           <p className="text-slate-500 dark:text-slate-400">Nenhum mecânico encontrado</p>
         </div>
       )}
+
+      <NewMechanicModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={onCreateMechanic}
+      />
     </div>
   );
 };
+

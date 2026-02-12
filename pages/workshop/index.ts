@@ -1,4 +1,4 @@
-export { WorkshopDashboard } from './WorkshopDashboard';
+﻿export { WorkshopDashboard } from './WorkshopDashboard';
 export { WorkOrderKanban } from './WorkOrderKanban';
 export { MechanicsManagement } from './MechanicsManagement';
 export { VehicleDetailView } from './VehicleDetailView';
@@ -7,3 +7,4 @@ export { MaintenancePlanWizard } from './MaintenancePlanWizard';
 export { ScheduleDetail } from './ScheduleDetail';
 export { InspectionChecklistEditor } from './InspectionChecklistEditor';
 export { VehicleManagement } from './VehicleManagement';
+
