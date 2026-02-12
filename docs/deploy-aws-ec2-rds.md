@@ -84,6 +84,23 @@ Ordem interna do script:
 6. copia `dist/` para `/var/www/logiwms`
 7. sobe/reinicia backend no PM2 e recarrega Nginx
 
+## 5.1) Opcao script unico (`update.sh`)
+
+Se quiser atualizar sempre com novo clone + deploy completo, use:
+
+```bash
+cd ~/logiwms-pro
+chmod +x update.sh
+DB_HOST=<RDS_ENDPOINT> JWT_SECRET='<SEGREDO_FORTE>' ./update.sh
+```
+
+A partir da segunda execucao, o script reutiliza `~/.config/logiwms/api-backend.env` e basta:
+
+```bash
+cd ~/logiwms-pro
+./update.sh
+```
+
 ## 6) Validacao
 
 ```bash

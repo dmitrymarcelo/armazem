@@ -209,6 +209,7 @@ Campos-chave do log:
 Arquivos adicionados para acelerar publicacao:
 - `infra/aws/bootstrap-ec2.sh`: prepara instancia EC2 existente (Node, Nginx, PM2)
 - `deploy-ec2.sh`: deploy no host EC2 (sem git pull; install, migrate, build, pm2, nginx)
+- `update.sh`: atualizacao completa com novo `git clone` + deploy (Nginx/PM2)
 - `api-backend/.env.production.rds.example`: template de ambiente para producao com RDS
 - `docs/deploy-aws-ec2-rds.md`: passo a passo completo
 - Sem deploy automatizado por GitHub Actions: atualizacao via clone manual + execucao do script na EC2
