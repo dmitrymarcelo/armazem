@@ -24,35 +24,27 @@ if [[ ! -f "$API_DIR/.env" ]]; then
   exit 1
 fi
 
-echo "[1/7] Usando codigo local em $PROJECT_DIR (sem git pull)"
+echo "[1/8] Usando codigo local em $PROJECT_DIR (sem git pull)"
 cd "$PROJECT_DIR"
 
-echo "[2/7] Instalando dependencias"
+echo "[2/8] Instalando dependencias"
 npm ci
 npm --prefix api-backend ci
 
-echo "[3/7] Verificando conexao com banco"
+echo "[3/8] Verificando conexao com banco"
 npm --prefix api-backend run db:health
 
-echo "[4/7] Aplicando migracao"
+echo "[4/8] Aplicando migracao"
 npm --prefix api-backend run db:migrate
 
-echo "[5/7] Build do frontend"
+echo "[5/8] Build do frontend"
 npm run build
 
-echo "[6/7] Publicando frontend em $PUBLIC_DIR"
+echo "[6/8] Publicando frontend em $PUBLIC_DIR"
 sudo mkdir -p "$PUBLIC_DIR"
 sudo rsync -a --delete "$PROJECT_DIR/dist/" "$PUBLIC_DIR/"
 
-echo "[7/7] Reiniciando backend e nginx"
-cd "$API_DIR"
-if pm2 describe logiwms-api >/dev/null 2>&1; then
-  pm2 restart logiwms-api --update-env
-else
-  pm2 start index.js --name logiwms-api
-fi
-pm2 save
-
+echo "[7/8] Configurando Nginx"
 sudo tee "/etc/nginx/conf.d/${NGINX_SITE}.conf" >/dev/null <<EOF
 server {
   listen 80;
@@ -80,6 +72,15 @@ EOF
 sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl restart nginx
+
+echo "[8/8] Reiniciando backend (PM2)"
+cd "$API_DIR"
+if pm2 describe logiwms-api >/dev/null 2>&1; then
+  pm2 restart logiwms-api --update-env
+else
+  pm2 start index.js --name logiwms-api
+fi
+pm2 save
 
 echo
 echo "Deploy concluido."
